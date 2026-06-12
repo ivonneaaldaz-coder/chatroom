@@ -246,6 +246,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       display: 'flex',
       flexDirection: 'column',
       background: '#c0c0c0',
+      position: 'relative',
     }}>
       {/* Window chrome */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden', minWidth: 0, width: '100%', background: '#c0c0c0', border: 'none' }}>

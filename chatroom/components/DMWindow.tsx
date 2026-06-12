@@ -104,7 +104,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
   }
 
   const windowStyle: React.CSSProperties = isMobile ? {
-    position: 'fixed',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
