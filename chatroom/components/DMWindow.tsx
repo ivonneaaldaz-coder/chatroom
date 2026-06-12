@@ -125,7 +125,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
     position: 'fixed',
     bottom: 8,
     right: 8,
-    width: 200,
+    width: 150,
     maxWidth: 'calc(100vw - 180px)',
     height: 360,
     zIndex: 200,
