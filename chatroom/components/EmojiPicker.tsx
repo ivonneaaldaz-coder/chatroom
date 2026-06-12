@@ -55,7 +55,7 @@ export default function EmojiPicker({ onSelect, isMobile }: EmojiPickerProps) {
     position: 'absolute',
     bottom: '100%',
     left: 0,
-    width: 240,
+    width: 280,
     zIndex: 300,
     background: '#f0f0f0',
     borderTop: '2px solid #ffffff',
@@ -139,7 +139,7 @@ export default function EmojiPicker({ onSelect, isMobile }: EmojiPickerProps) {
           {/* Emoji grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
+            gridTemplateColumns: 'repeat(8, 1fr)',
             gap: 2,
             padding: 8,
             maxHeight: isMobile ? 160 : 180,
