@@ -55,12 +55,9 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   }, [])
 
   useEffect(() => {
-    try {
-      setIsEmbedded(window.self !== window.top)
-    } catch(e) {
-      // cross-origin iframe — definitely embedded
-      setIsEmbedded(true)
-    }
+    // Check URL param — lab passes ?embedded=1 when loading in iframe
+    const params = new URLSearchParams(window.location.search)
+    setIsEmbedded(params.get('embedded') === '1')
   }, [])
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
