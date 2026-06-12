@@ -162,6 +162,9 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     setOpenDMs(prev => prev.includes(user) ? prev : [...prev, user])
     setUnreadFrom(prev => prev.filter(u => u !== user))
     setShowUsers(false)
+    if(typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'dm_opened')
+    }
     // Save to recent contacts
     setRecentContacts(prev => {
       const updated = [user, ...prev.filter(u => u !== user)].slice(0, 10)
@@ -204,6 +207,9 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       }
       throw error
     }
+    if(typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'message_sent', { room_id: currentRoom })
+    }
   }
 
   // ── Change room ───────────────────────────────────────
@@ -211,6 +217,9 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     setCurrentRoom(room)
     setEntries([])
     setConnected(false)
+    if(typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'room_visit', { room_id: room })
+    }
   }
 
   // ── Leave ─────────────────────────────────────────────
