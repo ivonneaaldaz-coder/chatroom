@@ -177,7 +177,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       background: '#c0c0c0',
     }}>
       {/* Window chrome */}
-      <div className="win-outer" style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 4, overflow: 'hidden' }}>
+      <div className="win-outer" style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden' }}>
 
         {/* Title bar */}
         <div className="titlebar">
@@ -190,13 +190,9 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           </div>
         </div>
 
-        {/* Menu bar */}
-        <div className="menubar">
-          <span className="menubar-item">File</span>
-          <span className="menubar-item">Rooms</span>
-          <span className="menubar-item">People</span>
-          <span className="menubar-item">Help</span>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: connected ? '#008000' : '#808080', padding: '2px 8px' }}>
+        {/* Connection status — slim bar replacing menu */}
+        <div style={{ background: '#d4d0c8', borderBottom: '1px solid #808080', padding: '2px 8px', fontSize: 11, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+          <span style={{ color: connected ? '#008000' : '#808080' }}>
             {connected ? '● connected' : '○ connecting...'}
           </span>
         </div>

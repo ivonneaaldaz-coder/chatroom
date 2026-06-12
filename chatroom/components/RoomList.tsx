@@ -16,6 +16,8 @@ export default function RoomList({ currentRoom, onRoomChange }: RoomListProps) {
       flexDirection: 'column',
       overflow: 'hidden',
     }} className="sidebar-left">
+
+      {/* Header — hidden on mobile via CSS */}
       <div style={{
         padding: '4px 8px',
         background: '#000080',
@@ -28,6 +30,7 @@ export default function RoomList({ currentRoom, onRoomChange }: RoomListProps) {
         CHAT ROOMS
       </div>
 
+      {/* Room list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
         {ROOMS.map(room => (
           <div
@@ -48,11 +51,16 @@ export default function RoomList({ currentRoom, onRoomChange }: RoomListProps) {
               alignItems: 'center',
               gap: 4,
             }}
-            title={room.live ? undefined : 'coming soon'}
           >
             {room.label}
             {!room.live && (
-              <span style={{ fontSize: 9, color: '#aaaaaa', marginLeft: 'auto', fontFamily: 'Courier New', fontStyle: 'italic', letterSpacing: '0.04em' }}>
+              <span style={{
+                fontSize: 9,
+                color: '#aaaaaa',
+                marginLeft: 'auto',
+                fontFamily: 'Courier New',
+                fontStyle: 'italic',
+              }}>
                 soon
               </span>
             )}
