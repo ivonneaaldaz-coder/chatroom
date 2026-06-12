@@ -42,11 +42,16 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     } catch { return [] }
   })
   const [isMobile, setIsMobile] = useState(false)
+  const [isEmbedded, setIsEmbedded] = useState(false)
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 640)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
+  }, [])
+
+  useEffect(() => {
+    setIsEmbedded(window.self !== window.top)
   }, [])
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -241,8 +246,8 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       {/* Window chrome */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden', minWidth: 0, width: '100%', background: '#c0c0c0', border: 'none' }}>
 
-        {/* Title bar */}
-        <div className="titlebar">
+        {/* Title bar — hidden when embedded in lab iframe */}
+        {!isEmbedded && <div className="titlebar">
           <span>💬</span>
           <span className="titlebar-title">CHATROOM.exe — #{currentRoom}</span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -268,10 +273,10 @@ export default function ChatWindow({ username }: ChatWindowProps) {
             </div>
             <div className="titlebar-btn" title="Leave" onClick={handleLeave}>✕</div>
           </div>
-        </div>
+        </div>}
 
         {/* Connection status — slim bar replacing menu */}
-        <div style={{ background: '#d4d0c8', borderBottom: '1px solid #808080', padding: '2px 8px', fontSize: 11, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+        <div style={{ background: '#d4d0c8', borderBottom: '1px solid #808080', padding: '2px 8px', fontSize: 11, display: isEmbedded ? 'none' : 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
           <span style={{ color: connected ? '#008000' : '#808080' }}>
             {connected ? '● connected' : '○ connecting...'}
           </span>
