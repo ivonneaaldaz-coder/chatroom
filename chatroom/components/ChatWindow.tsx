@@ -253,14 +253,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       {/* Window chrome */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden', minWidth: 0, width: '100%', background: '#c0c0c0', border: 'none' }}>
 
-        {/* Title bar — hidden when embedded */}
-        {!isEmbedded && <div className="titlebar">
-          <span>💬</span>
-          <span className="titlebar-title">CHATROOM.exe — #{currentRoom}</span>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <div className="titlebar-btn" title="Leave" onClick={handleLeave}>✕</div>
-          </div>
-        </div>}
+        {/* Title bar — never shown, lab provides window chrome */}
 
         {/* Slim bar — shows online badge on mobile, connection status on desktop */}
         <div style={{
