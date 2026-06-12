@@ -172,12 +172,15 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   return (
     <div style={{
       height: '100vh',
+      width: '100vw',
+      maxWidth: '100vw',
+      overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
       background: '#c0c0c0',
     }}>
       {/* Window chrome */}
-      <div className="win-outer" style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden' }}>
+      <div className="win-outer" style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden', minWidth: 0, width: '100%' }}>
 
         {/* Title bar */}
         <div className="titlebar">
