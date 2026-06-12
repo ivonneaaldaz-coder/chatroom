@@ -23,9 +23,9 @@ export function isSystemMessage(entry: ChatEntry): entry is SystemMessage {
 
 export const ROOMS: { id: Room; label: string; live: boolean }[] = [
   { id: 'lobby',     label: '# lobby',     live: true  },
-  { id: 'artists',   label: '# artists',   live: false },
-  { id: 'builders',  label: '# builders',  live: false },
-  { id: 'marketers', label: '# marketers', live: false },
-  { id: 'travelers', label: '# travelers', live: false },
-  { id: 'random',    label: '# random',    live: false },
+  { id: 'artists',   label: '# artists',   live: true },
+  { id: 'builders',  label: '# builders',  live: true },
+  { id: 'marketers', label: '# marketers', live: true },
+  { id: 'travelers', label: '# travelers', live: true },
+  { id: 'random',    label: '# random',    live: true },
 ]
