@@ -6,6 +6,7 @@ interface UserListProps {
   currentUser: string
   onDM: (username: string) => void
   unreadFrom: string[]
+  recentContacts: string[]
 }
 
 function usernameColor(name: string): string {
@@ -15,7 +16,7 @@ function usernameColor(name: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
-export default function UserList({ users, currentUser, onDM, unreadFrom }: UserListProps) {
+export default function UserList({ users, currentUser, onDM, unreadFrom, recentContacts }: UserListProps) {
   return (
     <div style={{
       width: 180,
@@ -63,7 +64,7 @@ export default function UserList({ users, currentUser, onDM, unreadFrom }: UserL
                 alignItems: 'center',
                 gap: 5,
                 cursor: isMe ? 'default' : 'pointer',
-                background: hasUnread ? '#fffbe6' : 'transparent',
+                background: hasUnread ? '#fff0cc' : 'transparent',
               }}
             >
               <span style={{ color: '#008000', fontSize: 10, flexShrink: 0 }}>●</span>
@@ -81,15 +82,76 @@ export default function UserList({ users, currentUser, onDM, unreadFrom }: UserL
                 <span style={{ fontSize: 9, color: '#808080', flexShrink: 0 }}>(you)</span>
               )}
               {hasUnread && !isMe && (
-                <span style={{ fontSize: 9, color: '#cc6600', flexShrink: 0, animation: 'blink 1s step-end infinite' }}>●</span>
-              )}
-              {!isMe && !hasUnread && (
-                <span style={{ fontSize: 9, color: '#aaaaaa', flexShrink: 0, opacity: 0 }}>✉</span>
+                <span style={{
+                  fontSize: 9,
+                  color: '#ffffff',
+                  background: '#cc0000',
+                  padding: '1px 4px',
+                  fontFamily: 'Courier New',
+                  fontWeight: 'bold',
+                  flexShrink: 0,
+                  animation: 'blink 0.8s step-end infinite',
+                  letterSpacing: '0.02em',
+                }}>NEW</span>
               )}
             </div>
           )
         })}
       </div>
+
+      {/* Recent contacts — offline users you've DM'd before */}
+      {recentContacts.filter(u => !users.includes(u) && u !== currentUser).length > 0 && (
+        <>
+          <div style={{
+            padding: '3px 8px',
+            background: '#e0e0e0',
+            fontSize: 10,
+            fontWeight: 'bold',
+            letterSpacing: '0.06em',
+            color: '#606060',
+            borderTop: '1px solid #c0c0c0',
+            flexShrink: 0,
+          }}>
+            RECENT
+          </div>
+          {recentContacts.filter(u => !users.includes(u) && u !== currentUser).map(user => (
+            <div
+              key={user}
+              onClick={() => onDM(user)}
+              style={{
+                padding: '4px 14px 4px 10px',
+                fontSize: 12,
+                fontFamily: 'Courier New',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                cursor: 'pointer',
+                background: unreadFrom.includes(user) ? '#fff0cc' : 'transparent',
+              }}
+            >
+              <span style={{ color: '#aaaaaa', fontSize: 10, flexShrink: 0 }}>○</span>
+              <span style={{
+                color: '#888888',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                flex: 1,
+              }}>
+                {user}
+              </span>
+              {unreadFrom.includes(user) ? (
+                <span style={{
+                  fontSize: 9, color: '#ffffff', background: '#cc0000',
+                  padding: '1px 4px', fontWeight: 'bold', flexShrink: 0,
+                  animation: 'blink 0.8s step-end infinite',
+                }}>NEW</span>
+              ) : (
+                <span style={{ fontSize: 9, color: '#aaaaaa', flexShrink: 0 }}>offline</span>
+              )}
+            </div>
+          ))}
+        </>
+      )}
 
       <div style={{
         padding: '3px 8px',

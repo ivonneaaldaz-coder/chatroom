@@ -35,7 +35,19 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [showUsers, setShowUsers] = useState(false)
   const [openDMs, setOpenDMs] = useState<string[]>([])
   const [unreadFrom, setUnreadFrom] = useState<string[]>([])
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640
+  const [recentContacts, setRecentContacts] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      return JSON.parse(localStorage.getItem('chatroom_recent_contacts') || '[]')
+    } catch { return [] }
+  })
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -150,6 +162,12 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     setOpenDMs(prev => prev.includes(user) ? prev : [...prev, user])
     setUnreadFrom(prev => prev.filter(u => u !== user))
     setShowUsers(false)
+    // Save to recent contacts
+    setRecentContacts(prev => {
+      const updated = [user, ...prev.filter(u => u !== user)].slice(0, 10)
+      localStorage.setItem('chatroom_recent_contacts', JSON.stringify(updated))
+      return updated
+    })
   }
 
   function closeDM(user: string) {
@@ -268,7 +286,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
             <MessageInput onSend={handleSend} disabled={!connected} />
           </div>
 
-          <UserList users={onlineUsers} currentUser={username} onDM={openDM} unreadFrom={unreadFrom} />
+          <UserList users={onlineUsers} currentUser={username} onDM={openDM} unreadFrom={unreadFrom} recentContacts={recentContacts} />
         </div>
 
         {/* Mobile users bottom sheet */}
@@ -280,7 +298,6 @@ export default function ChatWindow({ username }: ChatWindowProps) {
               position: 'fixed', inset: 0,
               background: 'rgba(0,0,0,0.4)',
               zIndex: 100,
-              display: 'none', // shown via CSS on mobile
             }}
           >
             <div
@@ -312,21 +329,45 @@ export default function ChatWindow({ username }: ChatWindowProps) {
                 >✕</span>
               </div>
               {onlineUsers.map(user => (
-                <div key={user} style={{
-                  padding: '8px 14px',
-                  fontFamily: 'Courier New',
-                  fontSize: 13,
-                  borderBottom: '1px solid #e0e0e0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}>
-                  <span style={{ color: '#008000', fontSize: 11 }}>●</span>
-                  <span style={{ color: user === username ? '#000080' : '#444', fontWeight: user === username ? 'bold' : 'normal' }}>
+                <div
+                  key={user}
+                  onClick={() => user !== username && openDM(user)}
+                  style={{
+                    padding: '12px 14px',
+                    fontFamily: 'Courier New',
+                    fontSize: 14,
+                    borderBottom: '1px solid #e0e0e0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    cursor: user === username ? 'default' : 'pointer',
+                    background: unreadFrom.includes(user) ? '#fff0cc' : 'transparent',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  <span style={{ color: '#008000', fontSize: 11, flexShrink: 0 }}>●</span>
+                  <span style={{
+                    color: user === username ? '#000080' : '#444',
+                    fontWeight: user === username ? 'bold' : 'normal',
+                    flex: 1,
+                  }}>
                     {user}
                   </span>
                   {user === username && (
                     <span style={{ fontSize: 10, color: '#808080' }}>(you)</span>
+                  )}
+                  {user !== username && (
+                    <span style={{
+                      fontSize: unreadFrom.includes(user) ? 10 : 11,
+                      color: unreadFrom.includes(user) ? '#ffffff' : '#aaaaaa',
+                      background: unreadFrom.includes(user) ? '#cc0000' : 'transparent',
+                      padding: unreadFrom.includes(user) ? '1px 5px' : '0',
+                      fontWeight: unreadFrom.includes(user) ? 'bold' : 'normal',
+                      animation: unreadFrom.includes(user) ? 'blink 0.8s step-end infinite' : 'none',
+                      flexShrink: 0,
+                    }}>
+                      {unreadFrom.includes(user) ? 'NEW' : 'DM →'}
+                    </span>
                   )}
                 </div>
               ))}
