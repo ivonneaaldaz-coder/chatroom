@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { getNextSystemMessage, nextSystemMessageDelay } from '@/lib/systemMessages'
 import { type Message, type SystemMessage, type Room } from '@/types'
 import RoomList from './RoomList'
+import DMWindow from './DMWindow'
 import UserList from './UserList'
 import MessageFeed from './MessageFeed'
 import MessageInput from './MessageInput'
@@ -32,6 +33,9 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([username])
   const [connected, setConnected] = useState(false)
   const [showUsers, setShowUsers] = useState(false)
+  const [openDMs, setOpenDMs] = useState<string[]>([])
+  const [unreadFrom, setUnreadFrom] = useState<string[]>([])
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -135,13 +139,40 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     loadMessages(currentRoom)
     subscribe(currentRoom)
     scheduleSystemMsg()
-
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current)
       if (systemTimerRef.current) clearTimeout(systemTimerRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoom])
+
+  function openDM(user: string) {
+    setOpenDMs(prev => prev.includes(user) ? prev : [...prev, user])
+    setUnreadFrom(prev => prev.filter(u => u !== user))
+    setShowUsers(false)
+  }
+
+  function closeDM(user: string) {
+    setOpenDMs(prev => prev.filter(u => u !== user))
+  }
+
+  // Listen for incoming DMs to show unread indicator
+  useEffect(() => {
+    const channel = supabase
+      .channel(`dm-notify:${username}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `to_username=eq.${username}` },
+        (payload) => {
+          const msg = payload.new as { from_username: string }
+          if (!openDMs.includes(msg.from_username)) {
+            setUnreadFrom(prev => prev.includes(msg.from_username) ? prev : [...prev, msg.from_username])
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [username, openDMs])
 
   // ── Send message ──────────────────────────────────────
   async function handleSend(content: string) {
@@ -237,7 +268,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
             <MessageInput onSend={handleSend} disabled={!connected} />
           </div>
 
-          <UserList users={onlineUsers} currentUser={username} />
+          <UserList users={onlineUsers} currentUser={username} onDM={openDM} unreadFrom={unreadFrom} />
         </div>
 
         {/* Mobile users bottom sheet */}
@@ -315,6 +346,16 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       </div>
 
 
+      {/* DM Windows */}
+      {openDMs.map((dmUser) => (
+        <DMWindow
+          key={dmUser}
+          currentUser={username}
+          recipient={dmUser}
+          onClose={() => closeDM(dmUser)}
+          isMobile={isMobile}
+        />
+      ))}
     </div>
   )
 }
