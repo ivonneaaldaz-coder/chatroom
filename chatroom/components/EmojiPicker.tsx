@@ -55,7 +55,7 @@ export default function EmojiPicker({ onSelect, isMobile }: EmojiPickerProps) {
     position: 'absolute',
     bottom: '100%',
     left: 0,
-    width: 280,
+    width: 240,
     zIndex: 300,
     background: '#f0f0f0',
     borderTop: '2px solid #ffffff',
