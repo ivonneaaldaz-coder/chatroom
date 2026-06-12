@@ -31,6 +31,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [onlineUsers, setOnlineUsers] = useState<string[]>([username])
   const [connected, setConnected] = useState(false)
+  const [showUsers, setShowUsers] = useState(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -186,9 +187,27 @@ export default function ChatWindow({ username }: ChatWindowProps) {
         <div className="titlebar">
           <span>💬</span>
           <span className="titlebar-title">CHATROOM.exe — #{currentRoom}</span>
-          <div style={{ display: 'flex', gap: 2 }}>
-            <div className="titlebar-btn" title="Minimize">_</div>
-            <div className="titlebar-btn" title="Maximize">□</div>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {/* Online count badge — mobile only, hidden on desktop via CSS */}
+            <div
+              className="online-badge"
+              onClick={() => setShowUsers(v => !v)}
+              style={{
+                background: '#1a5f1a',
+                color: '#ffffff',
+                fontSize: 10,
+                fontFamily: 'Courier New',
+                padding: '1px 6px',
+                cursor: 'pointer',
+                border: '1px solid #4a9f4a',
+                display: 'none', // shown via CSS on mobile
+                alignItems: 'center',
+                gap: 3,
+                userSelect: 'none',
+              }}
+            >
+              ● {onlineUsers.length}
+            </div>
             <div className="titlebar-btn" title="Leave" onClick={handleLeave}>✕</div>
           </div>
         </div>
@@ -221,12 +240,75 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           <UserList users={onlineUsers} currentUser={username} />
         </div>
 
+        {/* Mobile users bottom sheet */}
+        {showUsers && (
+          <div
+            className="users-sheet-overlay"
+            onClick={() => setShowUsers(false)}
+            style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 100,
+              display: 'none', // shown via CSS on mobile
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                bottom: 0, left: 0, right: 0,
+                background: '#f0f0f0',
+                borderTop: '2px solid #ffffff',
+                maxHeight: '50vh',
+                overflowY: 'auto',
+              }}
+            >
+              <div style={{
+                background: '#000080',
+                color: '#ffffff',
+                fontSize: 11,
+                fontWeight: 'bold',
+                padding: '5px 12px',
+                letterSpacing: '0.06em',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                ONLINE NOW
+                <span
+                  onClick={() => setShowUsers(false)}
+                  style={{ cursor: 'pointer', fontSize: 14 }}
+                >✕</span>
+              </div>
+              {onlineUsers.map(user => (
+                <div key={user} style={{
+                  padding: '8px 14px',
+                  fontFamily: 'Courier New',
+                  fontSize: 13,
+                  borderBottom: '1px solid #e0e0e0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                  <span style={{ color: '#008000', fontSize: 11 }}>●</span>
+                  <span style={{ color: user === username ? '#000080' : '#444', fontWeight: user === username ? 'bold' : 'normal' }}>
+                    {user}
+                  </span>
+                  {user === username && (
+                    <span style={{ fontSize: 10, color: '#808080' }}>(you)</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Status bar */}
-        <div className="statusbar">
-          <div className="statusbar-section">
+        <div className="statusbar" style={{ overflow: 'hidden' }}>
+          <div className="statusbar-section" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             #{currentRoom} · {onlineUsers.length} online
           </div>
-          <div className="statusbar-section" style={{ flex: 'none' }}>
+          <div className="statusbar-section" style={{ flex: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>
             {username}
           </div>
         </div>
