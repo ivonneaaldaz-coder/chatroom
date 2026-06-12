@@ -56,7 +56,7 @@ export default function EmojiPicker({ onSelect, isMobile, isEmbedded }: EmojiPic
     position: 'absolute',
     bottom: '100%',
     left: 0,
-    width: isEmbedded ? 220 : 280,
+    width: Math.min(260, window.innerWidth * 0.27),
     zIndex: 300,
     background: '#f0f0f0',
     borderTop: '2px solid #ffffff',

@@ -122,12 +122,12 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile, is
     borderRight: '2px solid #404040',
     boxShadow: '0 -4px 20px rgba(0,0,0,0.35)',
   } : {
-    // Desktop: size depends on context
+    // Desktop: size based on viewport width
     position: 'fixed',
     bottom: 40,
     right: 20,
-    width: isEmbedded ? 220 : 320,
-    height: isEmbedded ? 280 : 360,
+    width: Math.min(280, window.innerWidth * 0.28),
+    height: 320,
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
