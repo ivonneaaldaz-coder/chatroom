@@ -104,26 +104,30 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
   }
 
   const windowStyle: React.CSSProperties = isMobile ? {
-    // Mobile: bottom sheet — slides up from bottom, partial height
+    // Mobile: bottom sheet — narrower, centered, slides up from bottom
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
-    height: '55%',
+    left: '4%',
+    right: '4%',
+    width: '92%',
+    height: '52%',
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
     background: '#c0c0c0',
     overflow: 'hidden',
     borderTop: '2px solid #ffffff',
-    boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
+    borderLeft: '2px solid #ffffff',
+    borderRight: '2px solid #404040',
+    boxShadow: '0 -4px 20px rgba(0,0,0,0.35)',
   } : {
     // Desktop: small AIM-style floating window bottom-right
     position: 'fixed',
     bottom: 8,
     right: 8,
-    width: 320,
-    height: 380,
+    width: 300,
+    maxWidth: 'calc(100vw - 180px)',
+    height: 360,
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',

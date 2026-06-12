@@ -340,11 +340,17 @@ export default function ChatWindow({ username }: ChatWindowProps) {
               onClick={e => e.stopPropagation()}
               style={{
                 position: 'absolute',
-                bottom: 0, left: 0, right: 0,
+                bottom: 0,
+                left: '4%',
+                right: '4%',
+                width: '92%',
                 background: '#f0f0f0',
                 borderTop: '2px solid #ffffff',
-                maxHeight: '50vh',
+                borderLeft: '2px solid #ffffff',
+                borderRight: '2px solid #404040',
+                maxHeight: '45vh',
                 overflowY: 'auto',
+                boxShadow: '0 -4px 20px rgba(0,0,0,0.25)',
               }}
             >
               <div style={{
