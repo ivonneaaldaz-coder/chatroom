@@ -105,11 +105,17 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
 
   const windowStyle: React.CSSProperties = isMobile ? {
     position: 'fixed',
-    inset: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
     background: '#c0c0c0',
+    overflow: 'hidden',
   } : {
     position: 'fixed',
     bottom: 40,
@@ -130,11 +136,11 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
 
   return (
     <div style={windowStyle}>
-      {/* Title bar */}
-      <div className="titlebar" style={{ flexShrink: 0 }}>
+      {/* Title bar — slim on mobile since lab tbar is above */}
+      <div className="titlebar" style={{ flexShrink: 0, fontSize: isMobile ? 12 : undefined, padding: isMobile ? '2px 6px' : undefined }}>
         <span>💬</span>
-        <span className="titlebar-title">
-          {recipient} — private message
+        <span className="titlebar-title" style={{ fontSize: isMobile ? 11 : undefined }}>
+          {isMobile ? recipient : `${recipient} — private message`}
         </span>
         <div className="titlebar-btn" onClick={onClose}>✕</div>
       </div>
@@ -155,6 +161,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
       {/* Messages */}
       <div style={{
         flex: 1,
+        minHeight: 0,
         overflowY: 'auto',
         padding: '8px 10px',
         background: '#ffffff',
@@ -166,6 +173,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
+        WebkitOverflowScrolling: 'touch',
       }}>
         {messages.length === 0 && (
           <div style={{ color: '#808080', fontSize: 11, fontStyle: 'italic', fontFamily: 'Courier New' }}>
@@ -198,7 +206,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
       </div>
 
       {/* Input */}
-      <div style={{ padding: '4px', flexShrink: 0 }}>
+      <div style={{ padding: '4px 4px 8px 4px', flexShrink: 0, background: '#c0c0c0' }}>
         {error && (
           <div style={{ fontSize: 10, color: '#800000', fontFamily: 'Courier New', marginBottom: 2 }}>
             ⚠ {error}
