@@ -180,7 +180,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       background: '#c0c0c0',
     }}>
       {/* Window chrome */}
-      <div className="win-outer" style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden', minWidth: 0, width: '100%' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden', minWidth: 0, width: '100%', background: '#c0c0c0', border: 'none' }}>
 
         {/* Title bar */}
         <div className="titlebar">
