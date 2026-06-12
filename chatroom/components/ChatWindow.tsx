@@ -263,7 +263,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
                 padding: '1px 6px',
                 cursor: 'pointer',
                 border: '1px solid #4a9f4a',
-                display: 'none', // shown via CSS on mobile
+                display: isMobile ? 'inline-flex' : 'none',
                 alignItems: 'center',
                 gap: 3,
                 userSelect: 'none',
@@ -311,7 +311,8 @@ export default function ChatWindow({ username }: ChatWindowProps) {
             style={{
               position: 'fixed', inset: 0,
               background: 'rgba(0,0,0,0.4)',
-              zIndex: 100,
+              zIndex: 400,
+              display: isMobile ? 'block' : 'none',
             }}
           >
             <div
