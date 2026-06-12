@@ -9,7 +9,8 @@ export default function RoomList({ currentRoom, onRoomChange }: RoomListProps) {
   return (
     <div style={{
       width: 140,
-      flexShrink: 0,
+      minWidth: 100,
+      flexShrink: 1,
       background: '#f0f0f0',
       borderRight: '1px solid #808080',
       display: 'flex',

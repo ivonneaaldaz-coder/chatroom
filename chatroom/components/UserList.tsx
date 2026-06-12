@@ -18,7 +18,9 @@ export default function UserList({ users, currentUser }: UserListProps) {
   return (
     <div style={{
       width: 180,
-      flexShrink: 0,
+      minWidth: 140,
+      maxWidth: 180,
+      flexShrink: 1,
       background: '#f0f0f0',
       borderLeft: '1px solid #808080',
       display: 'flex',
@@ -61,6 +63,9 @@ export default function UserList({ users, currentUser }: UserListProps) {
               style={{
                 color: usernameColor(user),
                 fontWeight: user === currentUser ? 'bold' : 'normal',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
             >
               {user}
