@@ -176,7 +176,7 @@ export default function LandingPage() {
   if (stage === 'booting') return (
     <div className="boot-screen">
       <div style={{ fontFamily: 'Courier New', fontSize: 14, color: '#aaaacc', marginBottom: 8 }}>
-        CHATROOM.exe<br />Copyright (C) 2026 bywhitespace.com
+        Copyright (C) 2026 bywhitespace.com
       </div>
       <div style={{ fontSize: 28, fontWeight: 'bold', letterSpacing: '0.1em' }}>
         CHATROOM<span className="cursor-blink">.exe</span>
