@@ -250,40 +250,54 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       {/* Window chrome */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: 0, overflow: 'hidden', minWidth: 0, width: '100%', background: '#c0c0c0', border: 'none' }}>
 
-        {/* Title bar — hidden when embedded in lab iframe */}
+        {/* Title bar — hidden when embedded */}
         {!isEmbedded && <div className="titlebar">
           <span>💬</span>
           <span className="titlebar-title">CHATROOM.exe — #{currentRoom}</span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {/* Online count badge — mobile only, hidden on desktop via CSS */}
+            <div className="titlebar-btn" title="Leave" onClick={handleLeave}>✕</div>
+          </div>
+        </div>}
+
+        {/* Slim bar — shows online badge on mobile, connection status on desktop */}
+        <div style={{
+          background: '#d4d0c8',
+          borderBottom: '1px solid #808080',
+          padding: '2px 8px',
+          fontSize: 11,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexShrink: 0,
+        }}>
+          {/* Online badge — always shown on mobile */}
+          {isMobile ? (
             <div
-              className="online-badge"
               onClick={() => setShowUsers(v => !v)}
               style={{
                 background: '#1a5f1a',
                 color: '#ffffff',
                 fontSize: 10,
                 fontFamily: 'Courier New',
-                padding: '1px 6px',
+                padding: '2px 8px',
                 cursor: 'pointer',
                 border: '1px solid #4a9f4a',
-                display: isMobile ? 'inline-flex' : 'none',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: 3,
+                gap: 4,
                 userSelect: 'none',
+                borderRadius: 2,
               }}
             >
-              ● {onlineUsers.length}
+              ● {onlineUsers.length} online
             </div>
-            <div className="titlebar-btn" title="Leave" onClick={handleLeave}>✕</div>
-          </div>
-        </div>}
-
-        {/* Connection status — slim bar replacing menu */}
-        <div style={{ background: '#d4d0c8', borderBottom: '1px solid #808080', padding: '2px 8px', fontSize: 11, display: isEmbedded ? 'none' : 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-          <span style={{ color: connected ? '#008000' : '#808080' }}>
-            {connected ? '● connected' : '○ connecting...'}
-          </span>
+          ) : <span />}
+          {/* Connection status — desktop only */}
+          {!isMobile && (
+            <span style={{ color: connected ? '#008000' : '#808080', marginLeft: 'auto' }}>
+              {connected ? '● connected' : '○ connecting...'}
+            </span>
+          )}
         </div>
 
         {/* Three-panel layout */}
