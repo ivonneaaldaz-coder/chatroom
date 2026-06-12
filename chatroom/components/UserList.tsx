@@ -17,8 +17,7 @@ function usernameColor(name: string): string {
 export default function UserList({ users, currentUser }: UserListProps) {
   return (
     <div style={{
-      width: 140,
-      minWidth: 0,
+      width: 160,
       flexShrink: 0,
       background: '#f0f0f0',
       borderLeft: '1px solid #808080',
@@ -49,7 +48,7 @@ export default function UserList({ users, currentUser }: UserListProps) {
           <div
             key={user}
             style={{
-              padding: '3px 10px',
+              padding: '3px 14px',
               fontSize: 12,
               fontFamily: 'Courier New',
               display: 'flex',
@@ -62,11 +61,6 @@ export default function UserList({ users, currentUser }: UserListProps) {
               style={{
                 color: usernameColor(user),
                 fontWeight: user === currentUser ? 'bold' : 'normal',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: 90,
-                display: 'inline-block',
               }}
             >
               {user}

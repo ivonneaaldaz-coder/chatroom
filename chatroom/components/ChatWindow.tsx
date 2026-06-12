@@ -232,38 +232,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
         </div>
       </div>
 
-      {/* Taskbar */}
-      <div style={{
-        background: '#c0c0c0',
-        borderTop: '2px solid #ffffff',
-        padding: '2px 4px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        flexShrink: 0,
-        height: 32,
-      }}>
-        <div style={{
-          background: '#000080',
-          color: '#ffffff',
-          padding: '2px 12px',
-          fontSize: 12,
-          fontWeight: 'bold',
-          border: '1px inset #404040',
-        }}>
-          💬 Start
-        </div>
-        <div style={{ flex: 1 }} />
-        <div style={{
-          fontSize: 11,
-          fontFamily: 'Courier New',
-          border: '1px inset #808080',
-          padding: '2px 8px',
-          background: '#c0c0c0',
-        }}>
-          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </div>
-      </div>
+
     </div>
   )
 }
