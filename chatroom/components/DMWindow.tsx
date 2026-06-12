@@ -121,13 +121,12 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
     borderRight: '2px solid #404040',
     boxShadow: '0 -4px 20px rgba(0,0,0,0.35)',
   } : {
-    // Desktop: compact Yahoo-style PM window bottom-right
-    position: 'fixed',
-    bottom: 8,
-    right: 8,
+    // Desktop: compact Yahoo-style PM window anchored bottom-right of chat container
+    position: 'absolute',
+    bottom: 40,
+    right: 4,
     width: 240,
-    maxWidth: 'calc(100vw - 180px)',
-    height: 300,
+    height: 280,
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
