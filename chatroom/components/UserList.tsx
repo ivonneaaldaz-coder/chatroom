@@ -18,12 +18,14 @@ export default function UserList({ users, currentUser }: UserListProps) {
   return (
     <div style={{
       width: 140,
+      minWidth: 0,
       flexShrink: 0,
       background: '#f0f0f0',
       borderLeft: '1px solid #808080',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      boxSizing: 'border-box',
     }} className="sidebar-right">
       <div style={{
         padding: '4px 8px',
@@ -60,6 +62,11 @@ export default function UserList({ users, currentUser }: UserListProps) {
               style={{
                 color: usernameColor(user),
                 fontWeight: user === currentUser ? 'bold' : 'normal',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 90,
+                display: 'inline-block',
               }}
             >
               {user}
