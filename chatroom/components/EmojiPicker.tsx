@@ -22,9 +22,10 @@ const EMOJI_CATEGORIES = [
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void
   isMobile: boolean
+  isEmbedded?: boolean
 }
 
-export default function EmojiPicker({ onSelect, isMobile }: EmojiPickerProps) {
+export default function EmojiPicker({ onSelect, isMobile, isEmbedded }: EmojiPickerProps) {
   const [open, setOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
@@ -55,7 +56,7 @@ export default function EmojiPicker({ onSelect, isMobile }: EmojiPickerProps) {
     position: 'absolute',
     bottom: '100%',
     left: 0,
-    width: 240,
+    width: isEmbedded ? 220 : 280,
     zIndex: 300,
     background: '#f0f0f0',
     borderTop: '2px solid #ffffff',

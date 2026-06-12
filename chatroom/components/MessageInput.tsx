@@ -6,9 +6,10 @@ interface MessageInputProps {
   onSend: (content: string) => Promise<void>
   disabled?: boolean
   isMobile?: boolean
+  isEmbedded?: boolean
 }
 
-export default function MessageInput({ onSend, disabled, isMobile = false }: MessageInputProps) {
+export default function MessageInput({ onSend, disabled, isMobile = false, isEmbedded = false }: MessageInputProps) {
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
@@ -76,7 +77,7 @@ export default function MessageInput({ onSend, disabled, isMobile = false }: Mes
 
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', position: 'relative' }}>
         {/* Emoji picker */}
-        <EmojiPicker onSelect={handleEmojiSelect} isMobile={isMobile} />
+        <EmojiPicker onSelect={handleEmojiSelect} isMobile={isMobile} isEmbedded={isEmbedded} />
 
         <input
           ref={inputRef}

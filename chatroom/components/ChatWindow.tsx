@@ -318,7 +318,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           {/* Center */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
             <MessageFeed entries={entries} currentUser={username} />
-            <MessageInput onSend={handleSend} disabled={!connected} isMobile={isMobile} />
+            <MessageInput onSend={handleSend} disabled={!connected} isMobile={isMobile} isEmbedded={isEmbedded} />
           </div>
 
           <UserList users={onlineUsers} currentUser={username} onDM={openDM} unreadFrom={unreadFrom} recentContacts={recentContacts} />
@@ -437,6 +437,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           recipient={dmUser}
           onClose={() => closeDM(dmUser)}
           isMobile={isMobile}
+          isEmbedded={isEmbedded}
         />
       ))}
     </div>

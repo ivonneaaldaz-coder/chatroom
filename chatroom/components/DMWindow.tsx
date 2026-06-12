@@ -18,6 +18,7 @@ interface DMWindowProps {
   recipient: string
   onClose: () => void
   isMobile: boolean
+  isEmbedded: boolean
 }
 
 function conversationId(a: string, b: string) {
@@ -29,7 +30,7 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function DMWindow({ currentUser, recipient, onClose, isMobile }: DMWindowProps) {
+export default function DMWindow({ currentUser, recipient, onClose, isMobile, isEmbedded }: DMWindowProps) {
   const [messages, setMessages] = useState<DMMessage[]>([])
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
@@ -121,12 +122,12 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
     borderRight: '2px solid #404040',
     boxShadow: '0 -4px 20px rgba(0,0,0,0.35)',
   } : {
-    // Desktop: Yahoo-style PM window bottom-right
+    // Desktop: size depends on context
     position: 'fixed',
     bottom: 40,
     right: 20,
-    width: 260,
-    height: 320,
+    width: isEmbedded ? 220 : 320,
+    height: isEmbedded ? 280 : 360,
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
