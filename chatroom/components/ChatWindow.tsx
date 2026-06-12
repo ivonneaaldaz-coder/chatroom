@@ -278,19 +278,21 @@ export default function ChatWindow({ username }: ChatWindowProps) {
               style={{
                 background: '#1a5f1a',
                 color: '#ffffff',
-                fontSize: 10,
+                fontSize: 11,
                 fontFamily: 'Courier New',
-                padding: '2px 8px',
+                padding: '4px 10px',
                 cursor: 'pointer',
                 border: '1px solid #4a9f4a',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 4,
+                gap: 5,
                 userSelect: 'none',
                 borderRadius: 2,
+                fontWeight: 'bold',
+                letterSpacing: '0.03em',
               }}
             >
-              ● {onlineUsers.length} online
+              ● {onlineUsers.length} online — tap to DM
             </div>
           ) : <span />}
           {/* Connection status — desktop only */}

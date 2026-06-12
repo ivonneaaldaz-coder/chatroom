@@ -104,30 +104,31 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
   }
 
   const windowStyle: React.CSSProperties = isMobile ? {
+    // Mobile: bottom sheet — slides up from bottom, partial height
     position: 'absolute',
-    top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
+    height: '55%',
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
     background: '#c0c0c0',
     overflow: 'hidden',
+    borderTop: '2px solid #ffffff',
+    boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
   } : {
+    // Desktop: small AIM-style floating window bottom-right
     position: 'fixed',
-    bottom: 40,
-    right: 200,
-    width: 340,
-    height: 420,
+    bottom: 8,
+    right: 8,
+    width: 320,
+    height: 380,
     zIndex: 200,
     display: 'flex',
     flexDirection: 'column',
     background: '#c0c0c0',
     boxShadow: '4px 4px 0 rgba(0,0,0,0.4)',
-    // Win98 border
     borderTop: '2px solid #ffffff',
     borderLeft: '2px solid #ffffff',
     borderRight: '2px solid #404040',
@@ -223,8 +224,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
             placeholder={`message ${recipient}...`}
             maxLength={500}
             disabled={sending}
-            autoFocus
-          />
+            />
           <button
             className="btn-retro"
             onClick={handleSend}
