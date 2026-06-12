@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { validateMessage } from '@/lib/moderation'
+import EmojiPicker from './EmojiPicker'
 
 interface DMMessage {
   id: string
@@ -75,6 +76,10 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  function handleEmojiSelect(emoji: string) {
+    setInput(prev => prev + emoji)
+  }
 
   async function handleSend() {
     const trimmed = input.trim()
@@ -199,7 +204,8 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile }: 
             ⚠ {error}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, position: 'relative' }}>
+          <EmojiPicker onSelect={handleEmojiSelect} isMobile={isMobile} />
           <input
             className="input-retro"
             style={{ flex: 1, fontSize: isMobile ? 16 : 13 }}

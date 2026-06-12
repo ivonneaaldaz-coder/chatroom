@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react'
 import { validateMessage, MAX_MESSAGE_LENGTH } from '@/lib/moderation'
+import EmojiPicker from './EmojiPicker'
 
 interface MessageInputProps {
   onSend: (content: string) => Promise<void>
   disabled?: boolean
+  isMobile?: boolean
 }
 
-export default function MessageInput({ onSend, disabled }: MessageInputProps) {
+export default function MessageInput({ onSend, disabled, isMobile = false }: MessageInputProps) {
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
@@ -27,7 +29,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     try {
       await onSend(trimmed)
       setValue('')
-    } catch (e) {
+    } catch {
       setError('failed to send — try again')
     } finally {
       setSending(false)
@@ -41,6 +43,11 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
       handleSend()
     }
     if (error) setError('')
+  }
+
+  function handleEmojiSelect(emoji: string) {
+    setValue(prev => prev + emoji)
+    inputRef.current?.focus()
   }
 
   const charsLeft = MAX_MESSAGE_LENGTH - value.length
@@ -67,11 +74,14 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', position: 'relative' }}>
+        {/* Emoji picker */}
+        <EmojiPicker onSelect={handleEmojiSelect} isMobile={isMobile} />
+
         <input
           ref={inputRef}
           className="input-retro"
-          style={{ flex: 1, fontSize: 13 }}
+          style={{ flex: 1, fontSize: isMobile ? 16 : 13 }}
           value={value}
           onChange={e => { setValue(e.target.value); setError('') }}
           onKeyDown={handleKeyDown}
