@@ -44,7 +44,11 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [isMobile, setIsMobile] = useState(false)
   const [isEmbedded, setIsEmbedded] = useState(false)
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 640)
+    const check = () => {
+      // Check both window width and parent frame width for embedded context
+      const w = window.innerWidth || document.documentElement.clientWidth
+      setIsMobile(w <= 768)
+    }
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
