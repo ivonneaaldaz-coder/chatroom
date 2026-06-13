@@ -7,6 +7,7 @@ interface UserListProps {
   onDM: (username: string) => void
   unreadFrom: string[]
   recentContacts: string[]
+  onRemoveRecent: (user: string) => void
 }
 
 function usernameColor(name: string): string {
@@ -16,7 +17,7 @@ function usernameColor(name: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
-export default function UserList({ users, currentUser, onDM, unreadFrom, recentContacts }: UserListProps) {
+export default function UserList({ users, currentUser, onDM, unreadFrom, recentContacts, onRemoveRecent }: UserListProps) {
   return (
     <div style={{
       width: 180,
@@ -117,7 +118,6 @@ export default function UserList({ users, currentUser, onDM, unreadFrom, recentC
           {recentContacts.filter(u => !users.includes(u) && u !== currentUser).map(user => (
             <div
               key={user}
-              onClick={() => onDM(user)}
               style={{
                 padding: '4px 14px 4px 10px',
                 fontSize: 12,
@@ -125,29 +125,47 @@ export default function UserList({ users, currentUser, onDM, unreadFrom, recentC
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
-                cursor: 'pointer',
                 background: unreadFrom.includes(user) ? '#fff0cc' : 'transparent',
               }}
             >
               <span style={{ color: '#aaaaaa', fontSize: 10, flexShrink: 0 }}>○</span>
-              <span style={{
-                color: '#888888',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1,
-              }}>
+              <span
+                onClick={() => onDM(user)}
+                style={{
+                  color: '#888888',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                  cursor: 'pointer',
+                }}
+              >
                 {user}
               </span>
               {unreadFrom.includes(user) ? (
-                <span style={{
+                <span onClick={() => onDM(user)} style={{
                   fontSize: 9, color: '#ffffff', background: '#cc0000',
                   padding: '1px 4px', fontWeight: 'bold', flexShrink: 0,
+                  cursor: 'pointer',
                   animation: 'blink 0.8s step-end infinite',
                 }}>NEW</span>
               ) : (
                 <span style={{ fontSize: 9, color: '#aaaaaa', flexShrink: 0 }}>offline</span>
               )}
+              <span
+                onClick={(e) => { e.stopPropagation(); onRemoveRecent(user); }}
+                title="remove"
+                style={{
+                  fontSize: 10,
+                  color: '#cccccc',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  padding: '0 2px',
+                  lineHeight: 1,
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#cc0000')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#cccccc')}
+              >✕</span>
             </div>
           ))}
         </>

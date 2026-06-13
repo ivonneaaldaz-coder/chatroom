@@ -169,6 +169,12 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoom])
 
+  function removeRecent(user: string) {
+    const updated = recentContacts.filter(u => u !== user)
+    setRecentContacts(updated)
+    localStorage.setItem('chatroom_recent_contacts', JSON.stringify(updated))
+  }
+
   function openDM(user: string) {
     setOpenDMs(prev => prev.includes(user) ? prev : [...prev, user])
     setUnreadFrom(prev => prev.filter(u => u !== user))
@@ -316,7 +322,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
             <MessageInput onSend={handleSend} disabled={!connected} isMobile={isMobile} isEmbedded={isEmbedded} />
           </div>
 
-          <UserList users={onlineUsers} currentUser={username} onDM={openDM} unreadFrom={unreadFrom} recentContacts={recentContacts} />
+          <UserList users={onlineUsers} currentUser={username} onDM={openDM} unreadFrom={unreadFrom} recentContacts={recentContacts} onRemoveRecent={removeRecent} />
         </div>
 
         {/* Mobile users bottom sheet */}
