@@ -36,21 +36,44 @@ export function sanitizeUsername(raw: string): string {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9_\-]/g, '_')
-    .slice(0, 30) || generateUsername()
+    .slice(0, 30)
 }
 
+// ── Recovery code utilities ────────────────────────────────
+// New users get a 12-character code such as K7MX-R4QH-2DNP.
+// The readable code stays in that browser's localStorage. Only
+// its SHA-256 hash is saved in the existing users.pin_hash column.
+//
+// Existing 6-digit PINs still verify because numeric PINs normalize
+// to the exact same string that the original hashPin() used.
 
-// ── PIN utilities ──────────────────────────────────────────
+const RECOVERY_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
-export function generatePin(): string {
-  return Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join('')
+export function normalizeRecoveryCode(raw: string): string {
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
 }
 
-// Simple hash — we use SHA-256 via Web Crypto API
-// This runs in the browser; the raw PIN never leaves the client
-export async function hashPin(pin: string): Promise<string> {
+export function generateRecoveryCode(): string {
+  const bytes = new Uint8Array(12)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = Math.floor(Math.random() * 256)
+    }
+  }
+
+  const raw = Array.from(bytes, b => RECOVERY_CHARS[b % RECOVERY_CHARS.length]).join('')
+  return raw.match(/.{1,4}/g)?.join('-') ?? raw
+}
+
+export async function hashRecoveryCode(code: string): Promise<string> {
   const encoder = new TextEncoder()
-  const data = encoder.encode(pin + 'chatroom-exe-salt')
+  const normalized = normalizeRecoveryCode(code)
+  const data = encoder.encode(normalized + 'chatroom-exe-salt')
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
