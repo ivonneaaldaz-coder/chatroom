@@ -81,6 +81,19 @@ In Supabase dashboard → **Project Settings → API**:
 
 ---
 
+## Username Identity
+
+CHATROOM.exe keeps account setup intentionally lightweight:
+
+- Pick an available username and enter the room immediately.
+- The browser remembers claimed usernames automatically.
+- A recovery code is generated in the background and stored locally on that browser.
+- Click the username in the chat status bar to reveal/copy the recovery code.
+- On another browser or device, enter the username + recovery code to restore it.
+- Existing 6-digit PINs continue to work as legacy recovery codes.
+
+Only a SHA-256 hash of the recovery code is stored in Supabase. The readable code is not stored in the database.
+
 ## Moderation
 
 All moderation runs client-side + database-level. No extra services needed.
@@ -143,7 +156,7 @@ Things not built yet that will require backend when adding:
 
 - **Persistent presence** — currently uses Supabase Presence (ephemeral). For "X users online" counters that survive page refresh, add a `presence` table.
 - **Multiple live rooms** — schema already supports it. Just flip `live: true` in `types/index.ts` and update RLS room list.
-- **Saved usernames / profiles** — will need auth (Supabase Auth is the natural next step, anonymous auth works without passwords).
+- **Full profiles / stronger identity auth** — lightweight username recovery exists today; Supabase Auth would be the next step if the chat ever needs stronger account security.
 - **AI bot personalities** — can be added as a Supabase Edge Function that listens to new messages and inserts bot responses.
 - **Ask Eve integration** — same pattern, Edge Function calling the Anthropic API.
 - **Moderation dashboard** — right now deletion is manual in Supabase. A simple `/admin` route protected by a secret env var would make this faster.
