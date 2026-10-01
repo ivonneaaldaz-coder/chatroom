@@ -2,10 +2,10 @@
 -- CHATROOM.exe — users table (run in Supabase SQL Editor)
 -- ============================================================
 
--- Users table — stores claimed usernames + hashed PINs
+-- Users table — stores claimed usernames + hashed recovery credentials
 create table if not exists users (
   username     text primary key,
-  pin_hash     text not null,
+  pin_hash     text not null, -- legacy column name; stores recovery-code hash for new accounts
   created_at   timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
 );
@@ -23,16 +23,16 @@ create policy "Claim username"
   on users for insert
   with check (length(username) >= 2 and length(username) <= 30);
 
--- Update last_seen only (no pin_hash changes via API)
+-- Update last_seen only (no recovery hash changes via API)
 create policy "Update last seen"
   on users for update
   using (true)
   with check (pin_hash = (select pin_hash from users where username = users.username));
 
--- ── PIN verification function ──────────────────────────────
+-- ── Recovery-code verification function ────────────────────
 -- Called client-side: returns true if username + hash match.
--- We never expose the hash directly — this function is the only
--- way to verify, and it only returns a boolean.
+-- Legacy function name retained so existing 6-digit PIN accounts still work.
+-- New recovery codes use the same hash verification path and return only a boolean.
 create or replace function verify_pin(p_username text, p_pin_hash text)
 returns boolean
 language sql
