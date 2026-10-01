@@ -43,6 +43,11 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   })
   const [isMobile, setIsMobile] = useState(false)
   const [isEmbedded, setIsEmbedded] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [claimedIdentity, setClaimedIdentity] = useState(false)
+  const [recoveryCode, setRecoveryCode] = useState('')
+  const [recoveryCopied, setRecoveryCopied] = useState(false)
+  const [showRecoveryNudge, setShowRecoveryNudge] = useState(false)
   useEffect(() => {
     const check = () => {
       // Check both window width and parent frame width for embedded context
@@ -59,6 +64,33 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     const params = new URLSearchParams(window.location.search)
     setIsEmbedded(params.get('embedded') === '1')
   }, [])
+
+  useEffect(() => {
+    const claimed = localStorage.getItem('chatroom_claimed') === 'true'
+    const code = localStorage.getItem('chatroom_recovery_code') || ''
+    const justClaimed = localStorage.getItem('chatroom_just_claimed') === 'true'
+
+    setClaimedIdentity(claimed)
+    setRecoveryCode(code)
+
+    if (justClaimed) {
+      setShowRecoveryNudge(true)
+      localStorage.removeItem('chatroom_just_claimed')
+      const timer = setTimeout(() => setShowRecoveryNudge(false), 7000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
+  async function copyRecoveryCode() {
+    if (!recoveryCode) return
+    try {
+      await navigator.clipboard.writeText(recoveryCode)
+      setRecoveryCopied(true)
+      setTimeout(() => setRecoveryCopied(false), 1800)
+    } catch {
+      setRecoveryCopied(false)
+    }
+  }
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -423,12 +455,168 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           <div className="statusbar-section" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             #{currentRoom} · {onlineUsers.length} online
           </div>
-          <div className="statusbar-section" style={{ flex: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>
-            {username}
+          <div
+            className="statusbar-section"
+            onClick={() => setProfileOpen(true)}
+            title={claimedIdentity ? 'identity + recovery code' : 'guest identity'}
+            style={{
+              flex: 'none',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: 210,
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            {claimedIdentity ? '🔑 ' : ''}{username}
           </div>
         </div>
       </div>
 
+
+      {/* New-claim nudge: non-blocking, disappears on its own */}
+      {showRecoveryNudge && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 10,
+            bottom: 30,
+            zIndex: 450,
+            width: 280,
+            maxWidth: 'calc(100vw - 20px)',
+            background: '#ffffcc',
+            color: '#222',
+            borderTop: '2px solid #ffffff',
+            borderLeft: '2px solid #ffffff',
+            borderRight: '2px solid #404040',
+            borderBottom: '2px solid #404040',
+            boxShadow: '2px 2px 0 rgba(0,0,0,.25)',
+            padding: '8px 10px',
+            fontFamily: 'Courier New',
+            fontSize: 11,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>{username} claimed ✓</strong><br />
+          this browser will remember you.
+          <button
+            onClick={() => { setShowRecoveryNudge(false); setProfileOpen(true) }}
+            style={{
+              display: 'block',
+              marginTop: 5,
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              color: '#000080',
+              textDecoration: 'underline',
+              fontFamily: 'Courier New',
+              fontSize: 11,
+              cursor: 'pointer',
+            }}
+          >
+            view recovery code
+          </button>
+        </div>
+      )}
+
+      {/* Identity / recovery panel */}
+      {profileOpen && (
+        <div
+          onClick={() => setProfileOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 500,
+            background: 'rgba(0,0,0,.18)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            className="win-outer"
+            onClick={e => e.stopPropagation()}
+            style={{ width: 390, maxWidth: '94vw', background: '#c0c0c0' }}
+          >
+            <div className="titlebar">
+              <span>🔑</span>
+              <span className="titlebar-title">identity — {username}</span>
+              <button
+                onClick={() => setProfileOpen(false)}
+                style={{
+                  marginLeft: 'auto',
+                  width: 18,
+                  height: 18,
+                  lineHeight: '14px',
+                  padding: 0,
+                  fontFamily: 'Arial',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: 16, fontFamily: 'Courier New', color: '#222' }}>
+              <div style={{ fontSize: 12, marginBottom: 12 }}>
+                username: <strong style={{ color: '#000080' }}>{username}</strong>
+              </div>
+
+              {claimedIdentity ? (
+                <>
+                  <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444', marginBottom: 10 }}>
+                    this browser remembers you automatically.
+                  </div>
+
+                  {recoveryCode ? (
+                    <>
+                      <div style={{ fontSize: 10, color: '#666', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+                        recovery code
+                      </div>
+                      <div
+                        style={{
+                          background: '#000080',
+                          color: '#ffffff',
+                          border: '2px inset #404040',
+                          padding: '12px 10px',
+                          textAlign: 'center',
+                          fontSize: 20,
+                          letterSpacing: '.12em',
+                          marginBottom: 10,
+                          userSelect: 'all',
+                        }}
+                      >
+                        {recoveryCode}
+                      </div>
+                      <button className="btn-retro primary" onClick={copyRecoveryCode} style={{ width: '100%' }}>
+                        {recoveryCopied ? '✓ copied' : 'copy recovery code'}
+                      </button>
+                      <div style={{ fontSize: 10, color: '#666', lineHeight: 1.5, marginTop: 10 }}>
+                        use this only if you switch browsers, change devices, or clear site data.
+                        the readable code is stored on this browser; the database only has its hash.
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444' }}>
+                      legacy account detected.<br /><br />
+                      your original 6-digit PIN is your recovery code. sign out and back in with it once
+                      if you want this browser to save it here for easy copying later.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444' }}>
+                  guest session.<br /><br />
+                  this username is temporary and is not reserved.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DM Windows */}
       {openDMs.map((dmUser) => (
