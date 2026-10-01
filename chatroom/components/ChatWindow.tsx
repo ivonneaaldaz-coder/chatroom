@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getDeviceToken, hasLocalPin, setLocalPinStatus, clearActiveIdentity } from '@/lib/identity'
 import { getNextSystemMessage, nextSystemMessageDelay } from '@/lib/systemMessages'
 import { type Message, type SystemMessage, type Room } from '@/types'
 import RoomList from './RoomList'
@@ -45,9 +46,12 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [isEmbedded, setIsEmbedded] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [claimedIdentity, setClaimedIdentity] = useState(false)
-  const [recoveryCode, setRecoveryCode] = useState('')
-  const [recoveryCopied, setRecoveryCopied] = useState(false)
-  const [showRecoveryNudge, setShowRecoveryNudge] = useState(false)
+  const [hasPin, setHasPin] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [pinConfirm, setPinConfirm] = useState('')
+  const [pinMessage, setPinMessage] = useState('')
+  const [pinSaving, setPinSaving] = useState(false)
+  const [showClaimNudge, setShowClaimNudge] = useState(false)
   useEffect(() => {
     const check = () => {
       // Check both window width and parent frame width for embedded context
@@ -67,30 +71,74 @@ export default function ChatWindow({ username }: ChatWindowProps) {
 
   useEffect(() => {
     const claimed = localStorage.getItem('chatroom_claimed') === 'true'
-    const code = localStorage.getItem('chatroom_recovery_code') || ''
     const justClaimed = localStorage.getItem('chatroom_just_claimed') === 'true'
 
     setClaimedIdentity(claimed)
-    setRecoveryCode(code)
+    setHasPin(claimed ? hasLocalPin(username) : false)
 
     if (justClaimed) {
-      setShowRecoveryNudge(true)
+      setShowClaimNudge(true)
       localStorage.removeItem('chatroom_just_claimed')
-      const timer = setTimeout(() => setShowRecoveryNudge(false), 7000)
+      const timer = setTimeout(() => setShowClaimNudge(false), 7000)
       return () => clearTimeout(timer)
     }
-  }, [])
+  }, [username])
 
-  async function copyRecoveryCode() {
-    if (!recoveryCode) return
+  async function savePin() {
+    if (!/^\d{6}$/.test(pinInput)) {
+      setPinMessage('PIN must be 6 digits')
+      return
+    }
+    if (pinInput !== pinConfirm) {
+      setPinMessage('PINs do not match')
+      return
+    }
+
+    const deviceToken = getDeviceToken(username)
+    if (!deviceToken) {
+      setPinMessage('this browser is missing its identity token — switch usernames and sign back in')
+      return
+    }
+
+    setPinSaving(true)
+    setPinMessage('')
+
     try {
-      await navigator.clipboard.writeText(recoveryCode)
-      setRecoveryCopied(true)
-      setTimeout(() => setRecoveryCopied(false), 1800)
+      const { data, error } = await supabase.rpc('set_username_pin', {
+        p_username: username,
+        p_device_token: deviceToken,
+        p_pin: pinInput,
+      })
+
+      if (error || !data) {
+        setPinMessage('could not save PIN — try again')
+        return
+      }
+
+      setLocalPinStatus(username, true)
+      setHasPin(true)
+      setPinInput('')
+      setPinConfirm('')
+      setPinMessage('PIN saved ✓')
     } catch {
-      setRecoveryCopied(false)
+      setPinMessage('could not save PIN — check your connection')
+    } finally {
+      setPinSaving(false)
     }
   }
+
+  function chooseAnotherUsername() {
+    clearActiveIdentity()
+    setProfileOpen(false)
+    router.push('/?switch=1')
+  }
+
+  function signOut() {
+    clearActiveIdentity()
+    setProfileOpen(false)
+    router.push('/?signedout=1')
+  }
+
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -269,12 +317,6 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     if(typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'room_visit', { room_id: room })
     }
-  }
-
-  // ── Leave ─────────────────────────────────────────────
-  function handleLeave() {
-    localStorage.removeItem('chatroom_username')
-    router.push('/')
   }
 
   return (
@@ -458,7 +500,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           <div
             className="statusbar-section"
             onClick={() => setProfileOpen(true)}
-            title={claimedIdentity ? 'identity + recovery code' : 'guest identity'}
+            title={claimedIdentity ? 'identity + PIN' : 'guest identity — click to claim'}
             style={{
               flex: 'none',
               whiteSpace: 'nowrap',
@@ -475,15 +517,15 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       </div>
 
 
-      {/* New-claim nudge: non-blocking, disappears on its own */}
-      {showRecoveryNudge && (
+      {/* New claim nudge — optional PIN comes later, not before chat */}
+      {showClaimNudge && (
         <div
           style={{
             position: 'absolute',
             right: 10,
             bottom: 30,
             zIndex: 450,
-            width: 280,
+            width: 290,
             maxWidth: 'calc(100vw - 20px)',
             background: '#ffffcc',
             color: '#222',
@@ -501,7 +543,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           <strong>{username} claimed ✓</strong><br />
           this browser will remember you.
           <button
-            onClick={() => { setShowRecoveryNudge(false); setProfileOpen(true) }}
+            onClick={() => { setShowClaimNudge(false); setProfileOpen(true) }}
             style={{
               display: 'block',
               marginTop: 5,
@@ -515,12 +557,12 @@ export default function ChatWindow({ username }: ChatWindowProps) {
               cursor: 'pointer',
             }}
           >
-            view recovery code
+            add a PIN for other devices
           </button>
         </div>
       )}
 
-      {/* Identity / recovery panel */}
+      {/* Identity panel */}
       {profileOpen && (
         <div
           onClick={() => setProfileOpen(false)}
@@ -541,7 +583,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
             style={{ width: 390, maxWidth: '94vw', background: '#c0c0c0' }}
           >
             <div className="titlebar">
-              <span>🔑</span>
+              <span>{claimedIdentity ? '🔑' : '👤'}</span>
               <span className="titlebar-title">identity — {username}</span>
               <button
                 onClick={() => setProfileOpen(false)}
@@ -567,51 +609,94 @@ export default function ChatWindow({ username }: ChatWindowProps) {
 
               {claimedIdentity ? (
                 <>
-                  <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444', marginBottom: 10 }}>
-                    this browser remembers you automatically.
+                  <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444', marginBottom: 12 }}>
+                    this username is claimed and this browser remembers you automatically.
                   </div>
 
-                  {recoveryCode ? (
-                    <>
-                      <div style={{ fontSize: 10, color: '#666', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>
-                        recovery code
-                      </div>
-                      <div
-                        style={{
-                          background: '#000080',
-                          color: '#ffffff',
-                          border: '2px inset #404040',
-                          padding: '12px 10px',
-                          textAlign: 'center',
-                          fontSize: 20,
-                          letterSpacing: '.12em',
-                          marginBottom: 10,
-                          userSelect: 'all',
-                        }}
-                      >
-                        {recoveryCode}
-                      </div>
-                      <button className="btn-retro primary" onClick={copyRecoveryCode} style={{ width: '100%' }}>
-                        {recoveryCopied ? '✓ copied' : 'copy recovery code'}
-                      </button>
-                      <div style={{ fontSize: 10, color: '#666', lineHeight: 1.5, marginTop: 10 }}>
-                        use this only if you switch browsers, change devices, or clear site data.
-                        the readable code is stored on this browser; the database only has its hash.
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444' }}>
-                      legacy account detected.<br /><br />
-                      your original 6-digit PIN is your recovery code. sign out and back in with it once
-                      if you want this browser to save it here for easy copying later.
+                  <div style={{
+                    padding: '10px 11px',
+                    background: '#efefef',
+                    border: '1px solid #9a9a9a',
+                    marginBottom: 12,
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000080', marginBottom: 5 }}>
+                      {hasPin ? 'PIN SET ✓' : 'OPTIONAL: CREATE A PIN'}
                     </div>
-                  )}
+                    <div style={{ fontSize: 10, lineHeight: 1.5, color: '#555', marginBottom: 8 }}>
+                      {hasPin
+                        ? 'use a 6-digit PIN to sign into this username on another browser or device. enter a new one below if you want to change it.'
+                        : 'want to use this username on another browser or device? create your own 6-digit PIN.'}
+                    </div>
+
+                    <input
+                      className="input-retro"
+                      style={{ width: '100%', marginBottom: 6, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
+                      value={pinInput}
+                      onChange={e => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
+                      placeholder={hasPin ? 'new PIN' : '6-digit PIN'}
+                      maxLength={6}
+                      inputMode="numeric"
+                    />
+                    <input
+                      className="input-retro"
+                      style={{ width: '100%', marginBottom: 7, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
+                      value={pinConfirm}
+                      onChange={e => { setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
+                      onKeyDown={e => e.key === 'Enter' && savePin()}
+                      placeholder="confirm PIN"
+                      maxLength={6}
+                      inputMode="numeric"
+                    />
+
+                    {pinMessage && (
+                      <div style={{
+                        fontSize: 10,
+                        marginBottom: 7,
+                        color: pinMessage.includes('✓') ? '#006600' : '#800000',
+                      }}>
+                        {pinMessage}
+                      </div>
+                    )}
+
+                    <button
+                      className="btn-retro primary"
+                      onClick={savePin}
+                      disabled={pinInput.length !== 6 || pinConfirm.length !== 6 || pinSaving}
+                      style={{
+                        width: '100%',
+                        opacity: pinInput.length === 6 && pinConfirm.length === 6 && !pinSaving ? 1 : .55,
+                      }}
+                    >
+                      {pinSaving ? 'saving...' : hasPin ? 'change PIN' : 'save PIN'}
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-retro" onClick={chooseAnotherUsername} style={{ flex: 1 }}>
+                      switch username
+                    </button>
+                    <button className="btn-retro" onClick={signOut} style={{ flex: 1 }}>
+                      sign out
+                    </button>
+                  </div>
                 </>
               ) : (
-                <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444' }}>
-                  guest session.<br /><br />
-                  this username is temporary and is not reserved.
-                </div>
+                <>
+                  <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444', marginBottom: 14 }}>
+                    guest session. <strong>{username}</strong> is temporary and is not reserved.
+                  </div>
+
+                  <button
+                    className="btn-retro primary"
+                    onClick={chooseAnotherUsername}
+                    style={{ width: '100%', marginBottom: 8 }}
+                  >
+                    claim a username
+                  </button>
+                  <button className="btn-retro" onClick={signOut} style={{ width: '100%' }}>
+                    sign out
+                  </button>
+                </>
               )}
             </div>
           </div>
