@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getDeviceToken, hasLocalPin, setLocalPinStatus, clearActiveIdentity } from '@/lib/identity'
 import { getNextSystemMessage, nextSystemMessageDelay } from '@/lib/systemMessages'
 import { type Message, type SystemMessage, type Room } from '@/types'
 import RoomList from './RoomList'
@@ -43,6 +44,14 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   })
   const [isMobile, setIsMobile] = useState(false)
   const [isEmbedded, setIsEmbedded] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [claimedIdentity, setClaimedIdentity] = useState(false)
+  const [hasPin, setHasPin] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [pinConfirm, setPinConfirm] = useState('')
+  const [pinMessage, setPinMessage] = useState('')
+  const [pinSaving, setPinSaving] = useState(false)
+  const [showClaimNudge, setShowClaimNudge] = useState(false)
   useEffect(() => {
     const check = () => {
       // Check both window width and parent frame width for embedded context
@@ -59,6 +68,77 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     const params = new URLSearchParams(window.location.search)
     setIsEmbedded(params.get('embedded') === '1')
   }, [])
+
+  useEffect(() => {
+    const claimed = localStorage.getItem('chatroom_claimed') === 'true'
+    const justClaimed = localStorage.getItem('chatroom_just_claimed') === 'true'
+
+    setClaimedIdentity(claimed)
+    setHasPin(claimed ? hasLocalPin(username) : false)
+
+    if (justClaimed) {
+      setShowClaimNudge(true)
+      localStorage.removeItem('chatroom_just_claimed')
+      const timer = setTimeout(() => setShowClaimNudge(false), 7000)
+      return () => clearTimeout(timer)
+    }
+  }, [username])
+
+  async function savePin() {
+    if (!/^\d{6}$/.test(pinInput)) {
+      setPinMessage('PIN must be 6 digits')
+      return
+    }
+    if (pinInput !== pinConfirm) {
+      setPinMessage('PINs do not match')
+      return
+    }
+
+    const deviceToken = getDeviceToken(username)
+    if (!deviceToken) {
+      setPinMessage('this browser is missing its identity token — switch usernames and sign back in')
+      return
+    }
+
+    setPinSaving(true)
+    setPinMessage('')
+
+    try {
+      const { data, error } = await supabase.rpc('set_username_pin', {
+        p_username: username,
+        p_device_token: deviceToken,
+        p_pin: pinInput,
+      })
+
+      if (error || !data) {
+        setPinMessage('could not save PIN — try again')
+        return
+      }
+
+      setLocalPinStatus(username, true)
+      setHasPin(true)
+      setPinInput('')
+      setPinConfirm('')
+      setPinMessage('PIN saved ✓')
+    } catch {
+      setPinMessage('could not save PIN — check your connection')
+    } finally {
+      setPinSaving(false)
+    }
+  }
+
+  function chooseAnotherUsername() {
+    clearActiveIdentity()
+    setProfileOpen(false)
+    router.push('/?switch=1')
+  }
+
+  function signOut() {
+    clearActiveIdentity()
+    setProfileOpen(false)
+    router.push('/?signedout=1')
+  }
+
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const systemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -239,12 +319,6 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     }
   }
 
-  // ── Leave ─────────────────────────────────────────────
-  function handleLeave() {
-    localStorage.removeItem('chatroom_username')
-    router.push('/')
-  }
-
   return (
     <div style={{
       height: '100vh',
@@ -423,12 +497,211 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           <div className="statusbar-section" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             #{currentRoom} · {onlineUsers.length} online
           </div>
-          <div className="statusbar-section" style={{ flex: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>
-            {username}
+          <div
+            className="statusbar-section"
+            onClick={() => setProfileOpen(true)}
+            title={claimedIdentity ? 'identity + PIN' : 'guest identity — click to claim'}
+            style={{
+              flex: 'none',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: 210,
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            {claimedIdentity ? '🔑 ' : ''}{username}
           </div>
         </div>
       </div>
 
+
+      {/* New claim nudge — optional PIN comes later, not before chat */}
+      {showClaimNudge && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 10,
+            bottom: 30,
+            zIndex: 450,
+            width: 290,
+            maxWidth: 'calc(100vw - 20px)',
+            background: '#ffffcc',
+            color: '#222',
+            borderTop: '2px solid #ffffff',
+            borderLeft: '2px solid #ffffff',
+            borderRight: '2px solid #404040',
+            borderBottom: '2px solid #404040',
+            boxShadow: '2px 2px 0 rgba(0,0,0,.25)',
+            padding: '8px 10px',
+            fontFamily: 'Courier New',
+            fontSize: 11,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>{username} claimed ✓</strong><br />
+          this browser will remember you.
+          <button
+            onClick={() => { setShowClaimNudge(false); setProfileOpen(true) }}
+            style={{
+              display: 'block',
+              marginTop: 5,
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              color: '#000080',
+              textDecoration: 'underline',
+              fontFamily: 'Courier New',
+              fontSize: 11,
+              cursor: 'pointer',
+            }}
+          >
+            add a PIN for other devices
+          </button>
+        </div>
+      )}
+
+      {/* Identity panel */}
+      {profileOpen && (
+        <div
+          onClick={() => setProfileOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 500,
+            background: 'rgba(0,0,0,.18)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div
+            className="win-outer"
+            onClick={e => e.stopPropagation()}
+            style={{ width: 390, maxWidth: '94vw', background: '#c0c0c0' }}
+          >
+            <div className="titlebar">
+              <span>{claimedIdentity ? '🔑' : '👤'}</span>
+              <span className="titlebar-title">identity — {username}</span>
+              <button
+                onClick={() => setProfileOpen(false)}
+                style={{
+                  marginLeft: 'auto',
+                  width: 18,
+                  height: 18,
+                  lineHeight: '14px',
+                  padding: 0,
+                  fontFamily: 'Arial',
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: 16, fontFamily: 'Courier New', color: '#222' }}>
+              <div style={{ fontSize: 12, marginBottom: 12 }}>
+                username: <strong style={{ color: '#000080' }}>{username}</strong>
+              </div>
+
+              {claimedIdentity ? (
+                <>
+                  <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444', marginBottom: 12 }}>
+                    this username is claimed and this browser remembers you automatically.
+                  </div>
+
+                  <div style={{
+                    padding: '10px 11px',
+                    background: '#efefef',
+                    border: '1px solid #9a9a9a',
+                    marginBottom: 12,
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000080', marginBottom: 5 }}>
+                      {hasPin ? 'PIN SET ✓' : 'OPTIONAL: CREATE A PIN'}
+                    </div>
+                    <div style={{ fontSize: 10, lineHeight: 1.5, color: '#555', marginBottom: 8 }}>
+                      {hasPin
+                        ? 'use a 6-digit PIN to sign into this username on another browser or device. enter a new one below if you want to change it.'
+                        : 'want to use this username on another browser or device? create your own 6-digit PIN.'}
+                    </div>
+
+                    <input
+                      className="input-retro"
+                      style={{ width: '100%', marginBottom: 6, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
+                      value={pinInput}
+                      onChange={e => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
+                      placeholder={hasPin ? 'new PIN' : '6-digit PIN'}
+                      maxLength={6}
+                      inputMode="numeric"
+                    />
+                    <input
+                      className="input-retro"
+                      style={{ width: '100%', marginBottom: 7, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
+                      value={pinConfirm}
+                      onChange={e => { setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
+                      onKeyDown={e => e.key === 'Enter' && savePin()}
+                      placeholder="confirm PIN"
+                      maxLength={6}
+                      inputMode="numeric"
+                    />
+
+                    {pinMessage && (
+                      <div style={{
+                        fontSize: 10,
+                        marginBottom: 7,
+                        color: pinMessage.includes('✓') ? '#006600' : '#800000',
+                      }}>
+                        {pinMessage}
+                      </div>
+                    )}
+
+                    <button
+                      className="btn-retro primary"
+                      onClick={savePin}
+                      disabled={pinInput.length !== 6 || pinConfirm.length !== 6 || pinSaving}
+                      style={{
+                        width: '100%',
+                        opacity: pinInput.length === 6 && pinConfirm.length === 6 && !pinSaving ? 1 : .55,
+                      }}
+                    >
+                      {pinSaving ? 'saving...' : hasPin ? 'change PIN' : 'save PIN'}
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-retro" onClick={chooseAnotherUsername} style={{ flex: 1 }}>
+                      switch username
+                    </button>
+                    <button className="btn-retro" onClick={signOut} style={{ flex: 1 }}>
+                      sign out
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 11, lineHeight: 1.6, color: '#444', marginBottom: 14 }}>
+                    guest session. <strong>{username}</strong> is temporary and is not reserved.
+                  </div>
+
+                  <button
+                    className="btn-retro primary"
+                    onClick={chooseAnotherUsername}
+                    style={{ width: '100%', marginBottom: 8 }}
+                  >
+                    claim a username
+                  </button>
+                  <button className="btn-retro" onClick={signOut} style={{ width: '100%' }}>
+                    sign out
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* DM Windows */}
       {openDMs.map((dmUser) => (

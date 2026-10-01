@@ -81,6 +81,21 @@ In Supabase dashboard → **Project Settings → API**:
 
 ---
 
+## Username Identity
+
+CHATROOM.exe keeps identity lightweight:
+
+- Pick an available username and enter the room immediately.
+- The browser gets a high-entropy device token and remembers that username automatically.
+- A PIN is **optional**. Claimed users can create their own 6-digit PIN from the identity panel after entering chat.
+- The PIN is only needed to use that username on another browser or device.
+- Clicking the username in the chat status bar opens identity controls.
+- Guests can claim/switch usernames from inside the chat.
+- Claimed users can switch usernames or sign out without deleting the browser's saved ownership token.
+- Existing 6-digit PIN accounts continue to work.
+
+Device tokens are stored locally in the browser; only SHA-256 hashes are stored in Supabase. New PINs are hashed server-side with bcrypt-compatible `pgcrypto crypt()`. Failed PIN attempts are rate-limited in Postgres.
+
 ## Moderation
 
 All moderation runs client-side + database-level. No extra services needed.
@@ -143,7 +158,7 @@ Things not built yet that will require backend when adding:
 
 - **Persistent presence** — currently uses Supabase Presence (ephemeral). For "X users online" counters that survive page refresh, add a `presence` table.
 - **Multiple live rooms** — schema already supports it. Just flip `live: true` in `types/index.ts` and update RLS room list.
-- **Saved usernames / profiles** — will need auth (Supabase Auth is the natural next step, anonymous auth works without passwords).
+- **Full profiles / stronger identity auth** — lightweight browser identity + optional PIN exists today; Supabase Auth would be the next step if the chat ever needs stronger account security.
 - **AI bot personalities** — can be added as a Supabase Edge Function that listens to new messages and inserts bot responses.
 - **Ask Eve integration** — same pattern, Edge Function calling the Anthropic API.
 - **Moderation dashboard** — right now deletion is manual in Supabase. A simple `/admin` route protected by a secret env var would make this faster.

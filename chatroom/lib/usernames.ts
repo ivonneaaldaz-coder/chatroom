@@ -36,22 +36,13 @@ export function sanitizeUsername(raw: string): string {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9_\-]/g, '_')
-    .slice(0, 30) || generateUsername()
+    .slice(0, 30)
 }
 
-
-// ── PIN utilities ──────────────────────────────────────────
-
-export function generatePin(): string {
-  return Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join('')
-}
-
-// Simple hash — we use SHA-256 via Web Crypto API
-// This runs in the browser; the raw PIN never leaves the client
-export async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(pin + 'chatroom-exe-salt')
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+// High-entropy browser credential used to remember a claimed username.
+// The readable token never goes in Supabase; RPCs store only SHA-256(token).
+export function generateDeviceToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
 }
