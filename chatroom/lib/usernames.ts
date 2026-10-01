@@ -39,42 +39,10 @@ export function sanitizeUsername(raw: string): string {
     .slice(0, 30)
 }
 
-// ── Recovery code utilities ────────────────────────────────
-// New users get a 12-character code such as K7MX-R4QH-2DNP.
-// The readable code stays in that browser's localStorage. Only
-// its SHA-256 hash is saved in the existing users.pin_hash column.
-//
-// Existing 6-digit PINs still verify because numeric PINs normalize
-// to the exact same string that the original hashPin() used.
-
-const RECOVERY_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-
-export function normalizeRecoveryCode(raw: string): string {
-  return raw
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-}
-
-export function generateRecoveryCode(): string {
-  const bytes = new Uint8Array(12)
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes)
-  } else {
-    for (let i = 0; i < bytes.length; i++) {
-      bytes[i] = Math.floor(Math.random() * 256)
-    }
-  }
-
-  const raw = Array.from(bytes, b => RECOVERY_CHARS[b % RECOVERY_CHARS.length]).join('')
-  return raw.match(/.{1,4}/g)?.join('-') ?? raw
-}
-
-export async function hashRecoveryCode(code: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const normalized = normalizeRecoveryCode(code)
-  const data = encoder.encode(normalized + 'chatroom-exe-salt')
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+// High-entropy browser credential used to remember a claimed username.
+// The readable token never goes in Supabase; RPCs store only SHA-256(token).
+export function generateDeviceToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
 }
