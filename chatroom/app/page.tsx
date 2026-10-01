@@ -4,16 +4,15 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { generateUsername, sanitizeUsername, generateDeviceToken } from '@/lib/usernames'
 import {
-  generateUsername,
-  sanitizeUsername,
-  generateRecoveryCode,
-  hashRecoveryCode,
-  normalizeRecoveryCode,
-} from '@/lib/usernames'
+  getDeviceToken,
+  saveClaimedIdentity,
+  saveGuestIdentity,
+} from '@/lib/identity'
 import { supabase } from '@/lib/supabase'
 
-type Stage = 'booting' | 'landing' | 'recovery'
+type Stage = 'booting' | 'landing' | 'pin-login'
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken'
 
 const BOOT_LINES = [
@@ -33,18 +32,28 @@ export default function LandingPage() {
 
   const [inputUsername, setInputUsername] = useState('')
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle')
+  const [usernameHasPin, setUsernameHasPin] = useState(false)
   const [usernameError, setUsernameError] = useState('')
   const checkTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [recoveryInput, setRecoveryInput] = useState('')
-  const [recoveryError, setRecoveryError] = useState('')
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Fast little boot sequence. Returning users skip it entirely.
+  // Returning browsers go straight back in. If someone intentionally chose
+  // "switch username" or "sign out", skip the auto-login and show the picker.
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const choosingIdentity = params.get('switch') === '1' || params.get('signedout') === '1'
     const saved = localStorage.getItem('chatroom_username')
-    if (saved) {
+
+    if (saved && !choosingIdentity) {
       router.push('/chat')
+      return
+    }
+
+    if (choosingIdentity) {
+      setStage('landing')
       return
     }
 
@@ -84,6 +93,7 @@ export default function LandingPage() {
     const clean = sanitizeUsername(inputUsername)
     if (clean.length < 2) {
       setUsernameStatus('idle')
+      setUsernameHasPin(false)
       return
     }
 
@@ -91,11 +101,9 @@ export default function LandingPage() {
     if (checkTimeout.current) clearTimeout(checkTimeout.current)
 
     checkTimeout.current = setTimeout(async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('username')
-        .eq('username', clean)
-        .maybeSingle()
+      const { data, error } = await supabase.rpc('username_status', {
+        p_username: clean,
+      })
 
       if (error) {
         setUsernameStatus('idle')
@@ -104,7 +112,8 @@ export default function LandingPage() {
       }
 
       setUsernameError('')
-      setUsernameStatus(data ? 'taken' : 'available')
+      setUsernameHasPin(Boolean(data?.has_pin))
+      setUsernameStatus(Boolean(data?.claimed) ? 'taken' : 'available')
     }, 300)
 
     return () => {
@@ -114,10 +123,7 @@ export default function LandingPage() {
 
   function enterAsGuest() {
     const username = generateUsername()
-    localStorage.setItem('chatroom_username', username)
-    localStorage.removeItem('chatroom_claimed')
-    localStorage.removeItem('chatroom_recovery_code')
-    localStorage.removeItem('chatroom_just_claimed')
+    saveGuestIdentity(username)
     router.push('/chat')
   }
 
@@ -132,24 +138,21 @@ export default function LandingPage() {
     setUsernameError('')
 
     try {
-      const recoveryCode = generateRecoveryCode()
-      const recoveryHash = await hashRecoveryCode(recoveryCode)
+      const deviceToken = generateDeviceToken()
+      const { data, error } = await supabase.rpc('claim_username', {
+        p_username: clean,
+        p_device_token: deviceToken,
+      })
 
-      const { error } = await supabase
-        .from('users')
-        // pin_hash is the legacy DB column name; new accounts store a recovery-code hash here.
-        .insert({ username: clean, pin_hash: recoveryHash })
-
-      if (error) {
-        // Most likely the username was claimed between availability check + submit.
+      if (error || !data) {
+        const { data: status } = await supabase.rpc('username_status', { p_username: clean })
+        setUsernameHasPin(Boolean(status?.has_pin))
         setUsernameStatus('taken')
-        setStage('recovery')
+        setUsernameError('that username was just claimed — try signing in')
         return
       }
 
-      localStorage.setItem('chatroom_username', clean)
-      localStorage.setItem('chatroom_claimed', 'true')
-      localStorage.setItem('chatroom_recovery_code', recoveryCode)
+      saveClaimedIdentity(clean, deviceToken, false)
       localStorage.setItem('chatroom_just_claimed', 'true')
       router.push('/chat')
     } catch {
@@ -159,49 +162,75 @@ export default function LandingPage() {
     }
   }
 
-  function handleEnter() {
-    if (usernameStatus === 'taken') {
-      setRecoveryInput('')
-      setRecoveryError('')
-      setStage('recovery')
+  async function handleEnter() {
+    const clean = sanitizeUsername(inputUsername)
+    if (clean.length < 2 || loading) return
+
+    if (usernameStatus === 'available') {
+      await claimAndEnter()
       return
     }
-    if (usernameStatus === 'available') {
-      claimAndEnter()
+
+    if (usernameStatus !== 'taken') return
+
+    // If this browser already owns the username, use its saved device token.
+    const savedDeviceToken = getDeviceToken(clean)
+    if (savedDeviceToken) {
+      setLoading(true)
+      setUsernameError('')
+      try {
+        const { data, error } = await supabase.rpc('verify_device', {
+          p_username: clean,
+          p_device_token: savedDeviceToken,
+        })
+
+        if (!error && data) {
+          saveClaimedIdentity(clean, savedDeviceToken, usernameHasPin)
+          router.push('/chat')
+          return
+        }
+      } finally {
+        setLoading(false)
+      }
     }
+
+    if (usernameHasPin) {
+      setPinInput('')
+      setPinError('')
+      setStage('pin-login')
+      return
+    }
+
+    setUsernameError('that username is claimed on another browser and does not have a PIN yet')
   }
 
-  async function handleRecoverySignIn() {
+  async function handlePinSignIn() {
     const clean = sanitizeUsername(inputUsername)
-    const normalized = normalizeRecoveryCode(recoveryInput)
-
-    if (normalized.length < 6) {
-      setRecoveryError('enter your recovery code')
+    if (!/^\d{6}$/.test(pinInput)) {
+      setPinError('PIN must be 6 digits')
       return
     }
 
     setLoading(true)
-    setRecoveryError('')
+    setPinError('')
 
     try {
-      const hash = await hashRecoveryCode(recoveryInput)
-      const { data, error } = await supabase.rpc('verify_pin', {
+      const deviceToken = generateDeviceToken()
+      const { data, error } = await supabase.rpc('verify_pin_and_register_device', {
         p_username: clean,
-        p_pin_hash: hash,
+        p_pin: pinInput,
+        p_device_token: deviceToken,
       })
 
       if (error || !data) {
-        setRecoveryError('that code does not match')
+        setPinError('wrong PIN — or too many attempts. try again in a bit.')
         return
       }
 
-      localStorage.setItem('chatroom_username', clean)
-      localStorage.setItem('chatroom_claimed', 'true')
-      // Saving it here means this browser can reveal/copy it later from the profile panel.
-      localStorage.setItem('chatroom_recovery_code', recoveryInput.trim().toUpperCase())
+      saveClaimedIdentity(clean, deviceToken, true)
       router.push('/chat')
     } catch {
-      setRecoveryError('could not sign in — check your connection and try again')
+      setPinError('could not sign in — check your connection and try again')
     } finally {
       setLoading(false)
     }
@@ -212,10 +241,18 @@ export default function LandingPage() {
       return <span style={{ fontSize: 11, color: '#808080', fontFamily: 'Courier New' }}>checking...</span>
     }
     if (usernameStatus === 'available') {
-      return <span style={{ fontSize: 11, color: '#006600', fontFamily: 'Courier New' }}>✓ available</span>
+      return <span style={{ fontSize: 11, color: '#006600', fontFamily: 'Courier New' }}>✓ available — claim it</span>
     }
     if (usernameStatus === 'taken') {
-      return <span style={{ fontSize: 11, color: '#800000', fontFamily: 'Courier New' }}>× already claimed</span>
+      const savedHere = Boolean(getDeviceToken(sanitizeUsername(inputUsername)))
+      if (savedHere) {
+        return <span style={{ fontSize: 11, color: '#006600', fontFamily: 'Courier New' }}>✓ yours on this browser</span>
+      }
+      return (
+        <span style={{ fontSize: 11, color: '#800000', fontFamily: 'Courier New' }}>
+          × claimed{usernameHasPin ? ' — PIN required' : ''}
+        </span>
+      )
     }
     return null
   }
@@ -281,6 +318,7 @@ export default function LandingPage() {
                 onChange={e => {
                   setInputUsername(e.target.value)
                   setUsernameError('')
+                  setUsernameHasPin(false)
                 }}
                 onKeyDown={e => e.key === 'Enter' && canContinue && handleEnter()}
                 placeholder="your_username"
@@ -294,7 +332,7 @@ export default function LandingPage() {
                 disabled={!canContinue}
                 style={{ opacity: canContinue ? 1 : 0.5, minWidth: 88 }}
               >
-                {loading ? '...' : usernameStatus === 'taken' ? 'SIGN IN' : 'ENTER'}
+                {loading ? '...' : usernameStatus === 'available' ? 'CLAIM' : 'ENTER'}
               </button>
             </div>
 
@@ -333,19 +371,18 @@ export default function LandingPage() {
     )
   }
 
-  if (stage === 'recovery') {
+  if (stage === 'pin-login') {
     return (
       <div className="boot-screen">
-        <div className="win-outer" style={{ width: 390, maxWidth: '92vw' }}>
+        <div className="win-outer" style={{ width: 360, maxWidth: '92vw' }}>
           <div className="titlebar">
-            <span>🔑</span>
+            <span>🔐</span>
             <span className="titlebar-title">welcome back — {sanitizeUsername(inputUsername)}</span>
           </div>
 
           <div style={{ padding: 16 }}>
             <div style={{ fontSize: 12, fontFamily: 'Courier New', marginBottom: 12, color: '#444', lineHeight: 1.6 }}>
-              that username is already claimed.<br />
-              enter its recovery code to use it on this browser.
+              enter the 6-digit PIN for this username.
             </div>
 
             <input
@@ -353,43 +390,39 @@ export default function LandingPage() {
               style={{
                 width: '100%',
                 marginBottom: 6,
-                letterSpacing: '0.12em',
-                fontSize: 16,
+                letterSpacing: '0.22em',
+                fontSize: 18,
                 textAlign: 'center',
-                textTransform: 'uppercase',
               }}
-              value={recoveryInput}
+              value={pinInput}
               onChange={e => {
-                setRecoveryInput(e.target.value.slice(0, 20))
-                setRecoveryError('')
+                setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6))
+                setPinError('')
               }}
-              onKeyDown={e => e.key === 'Enter' && handleRecoverySignIn()}
-              placeholder="XXXX-XXXX-XXXX"
+              onKeyDown={e => e.key === 'Enter' && handlePinSignIn()}
+              placeholder="______"
+              maxLength={6}
+              inputMode="numeric"
               autoFocus
-              spellCheck={false}
-              autoCapitalize="characters"
             />
 
             <div style={{ minHeight: 18 }}>
-              {recoveryError && (
-                <span style={{ fontSize: 11, color: '#800000', fontFamily: 'Courier New' }}>⚠ {recoveryError}</span>
+              {pinError && (
+                <span style={{ fontSize: 11, color: '#800000', fontFamily: 'Courier New' }}>⚠ {pinError}</span>
               )}
             </div>
 
-            <div style={{ fontSize: 10, color: '#777', fontFamily: 'Courier New', lineHeight: 1.5, marginTop: 4 }}>
-              old account? your original 6-digit PIN still works here.
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 14 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 12 }}>
               <button
                 className="btn-retro"
                 style={{ fontSize: 12 }}
                 onClick={() => {
                   setStage('landing')
-                  setRecoveryInput('')
-                  setRecoveryError('')
+                  setPinInput('')
+                  setPinError('')
                   setInputUsername('')
                   setUsernameStatus('idle')
+                  setUsernameHasPin(false)
                 }}
               >
                 ← choose another
@@ -397,9 +430,9 @@ export default function LandingPage() {
 
               <button
                 className="btn-retro primary"
-                onClick={handleRecoverySignIn}
-                disabled={normalizeRecoveryCode(recoveryInput).length < 6 || loading}
-                style={{ opacity: normalizeRecoveryCode(recoveryInput).length < 6 ? 0.5 : 1 }}
+                onClick={handlePinSignIn}
+                disabled={pinInput.length !== 6 || loading}
+                style={{ opacity: pinInput.length === 6 ? 1 : 0.5 }}
               >
                 {loading ? 'checking...' : 'ENTER →'}
               </button>
