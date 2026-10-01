@@ -238,18 +238,18 @@ export default function LandingPage() {
 
   function UsernameStatusBadge() {
     if (usernameStatus === 'checking') {
-      return <span style={{ fontSize: 11, color: '#808080', fontFamily: 'Courier New' }}>checking...</span>
+      return <span style={{ fontSize: 11, color: '#8888cc', fontFamily: 'Courier New' }}>checking...</span>
     }
     if (usernameStatus === 'available') {
-      return <span style={{ fontSize: 11, color: '#006600', fontFamily: 'Courier New' }}>✓ available — claim it</span>
+      return <span style={{ fontSize: 11, color: '#66ff99', fontFamily: 'Courier New' }}>✓ available — claim it</span>
     }
     if (usernameStatus === 'taken') {
       const savedHere = Boolean(getDeviceToken(sanitizeUsername(inputUsername)))
       if (savedHere) {
-        return <span style={{ fontSize: 11, color: '#006600', fontFamily: 'Courier New' }}>✓ yours on this browser</span>
+        return <span style={{ fontSize: 11, color: '#66ff99', fontFamily: 'Courier New' }}>✓ yours on this browser</span>
       }
       return (
-        <span style={{ fontSize: 11, color: '#800000', fontFamily: 'Courier New' }}>
+        <span style={{ fontSize: 11, color: '#ff9999', fontFamily: 'Courier New' }}>
           × claimed{usernameHasPin ? ' — PIN required' : ''}
         </span>
       )
@@ -299,67 +299,129 @@ export default function LandingPage() {
           Just people hanging out.
         </div>
 
-        <div className="win-outer" style={{ width: 390, maxWidth: '90vw', marginTop: 8 }}>
-          <div className="titlebar">
-            <span>💬</span>
-            <span className="titlebar-title">choose a username</span>
+        <div
+          style={{
+            width: 440,
+            maxWidth: '88vw',
+            marginTop: 18,
+            fontFamily: 'Courier New',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: '#8888cc',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              marginBottom: 10,
+            }}
+          >
+            choose a username
           </div>
 
-          <div style={{ padding: 14 }}>
-            <div style={{ fontSize: 12, fontFamily: 'Courier New', color: '#444', marginBottom: 8 }}>
-              pick a handle. we'll remember you on this browser.
-            </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <span
+              style={{
+                color: '#aaaaff',
+                fontSize: 16,
+              }}
+            >
+              &gt;
+            </span>
 
-            <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-              <input
-                className="input-retro"
-                style={{ flex: 1, minWidth: 0 }}
-                value={inputUsername}
-                onChange={e => {
-                  setInputUsername(e.target.value)
-                  setUsernameError('')
-                  setUsernameHasPin(false)
-                }}
-                onKeyDown={e => e.key === 'Enter' && canContinue && handleEnter()}
-                placeholder="your_username"
-                maxLength={30}
-                autoFocus
-                spellCheck={false}
-              />
-              <button
-                className="btn-retro primary"
-                onClick={handleEnter}
-                disabled={!canContinue}
-                style={{ opacity: canContinue ? 1 : 0.5, minWidth: 88 }}
-              >
-                {loading ? '...' : usernameStatus === 'available' ? 'CLAIM' : 'ENTER'}
-              </button>
-            </div>
+            <input
+              value={inputUsername}
+              onChange={e => {
+                setInputUsername(e.target.value)
+                setUsernameError('')
+                setUsernameHasPin(false)
+              }}
+              onKeyDown={e => e.key === 'Enter' && canContinue && handleEnter()}
+              placeholder="your_username"
+              maxLength={30}
+              autoFocus
+              spellCheck={false}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                background: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid #7777cc',
+                outline: 'none',
+                color: '#ffffff',
+                fontFamily: 'Courier New',
+                fontSize: 16,
+                padding: '7px 2px',
+                caretColor: '#ffffff',
+              }}
+            />
 
-            <div style={{ minHeight: 18, marginTop: 6 }}>
-              {usernameError
-                ? <span style={{ fontSize: 11, color: '#800000', fontFamily: 'Courier New' }}>⚠ {usernameError}</span>
-                : <UsernameStatusBadge />
-              }
-            </div>
+            <button
+              onClick={handleEnter}
+              disabled={!canContinue}
+              style={{
+                background: 'transparent',
+                border: '1px solid #8888cc',
+                color: canContinue ? '#ffffff' : '#666699',
+                fontFamily: 'Courier New',
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                padding: '8px 14px',
+                cursor: canContinue ? 'pointer' : 'default',
+              }}
+            >
+              {loading
+                ? '...'
+                : usernameStatus === 'available'
+                  ? 'CLAIM →'
+                  : 'ENTER →'}
+            </button>
+          </div>
 
-            <div style={{ marginTop: 8, paddingTop: 9, borderTop: '1px solid #c0c0c0', textAlign: 'center' }}>
-              <button
-                onClick={enterAsGuest}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#000080',
-                  textDecoration: 'underline',
-                  fontFamily: 'Courier New',
-                  fontSize: 11,
-                  cursor: 'pointer',
-                  padding: 2,
-                }}
-              >
-                or continue as guest
-              </button>
-            </div>
+          <div
+            style={{
+              minHeight: 18,
+              marginTop: 7,
+              marginLeft: 24,
+              fontSize: 11,
+            }}
+          >
+            {usernameError ? (
+              <span style={{ color: '#ff9999' }}>
+                ⚠ {usernameError}
+              </span>
+            ) : (
+              <UsernameStatusBadge />
+            )}
+          </div>
+
+          <div
+            style={{
+              textAlign: 'center',
+              marginTop: 16,
+            }}
+          >
+            <button
+              onClick={enterAsGuest}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: '#8888cc',
+                fontFamily: 'Courier New',
+                fontSize: 10,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                padding: 2,
+              }}
+            >
+              continue as guest
+            </button>
           </div>
         </div>
 
