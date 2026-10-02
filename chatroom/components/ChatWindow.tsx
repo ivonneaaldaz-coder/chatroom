@@ -54,6 +54,10 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [pinSaving, setPinSaving] = useState(false)
   const [editingPin, setEditingPin] = useState(false)
   const [showClaimNudge, setShowClaimNudge] = useState(false)
+  const [notifyEmail, setNotifyEmail] = useState('')
+  const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(false)
+  const [emailNotifySaving, setEmailNotifySaving] = useState(false)
+  const [emailNotifyMessage, setEmailNotifyMessage] = useState('')
   const [soundEnabled, setSoundEnabled] = useState(() => {
     if (typeof window === 'undefined') return true
     return localStorage.getItem('chatroom_sound') !== 'off'
@@ -121,6 +125,91 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       return () => clearTimeout(timer)
     }
   }, [username])
+
+  // Restore email notification settings for claimed identities, and keep a
+  // lightweight activity heartbeat so email only fires while the user is away.
+  useEffect(() => {
+    if (!claimedIdentity) return
+    const deviceToken = getDeviceToken(username)
+    if (!deviceToken) return
+
+    let cancelled = false
+    supabase.rpc('get_notification_settings', {
+      p_username: username,
+      p_device_token: deviceToken,
+    }).then(({ data }) => {
+      if (cancelled || !data) return
+      setNotifyEmail(data.email || '')
+      setEmailNotifyEnabled(Boolean(data.enabled))
+    })
+
+    const touch = () => {
+      supabase.rpc('touch_user_activity', {
+        p_username: username,
+        p_device_token: deviceToken,
+      }).then(() => {})
+    }
+    touch()
+    const timer = setInterval(touch, 30000)
+
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [claimedIdentity, username])
+
+  // Load unread DMs that arrived while this browser was offline.
+  useEffect(() => {
+    if (!username) return
+    supabase
+      .from('dm_messages')
+      .select('from_username')
+      .eq('to_username', username)
+      .eq('deleted', false)
+      .is('read_at', null)
+      .then(({ data }) => {
+        const senders = Array.from(new Set((data || []).map((row: any) => row.from_username)))
+        setUnreadFrom(senders)
+        setRecentContacts(prev => {
+          const updated = [...senders, ...prev.filter(u => !senders.includes(u))].slice(0, 10)
+          localStorage.setItem('chatroom_recent_contacts', JSON.stringify(updated))
+          return updated
+        })
+      })
+  }, [username])
+
+  async function saveEmailNotifications() {
+    if (!claimedIdentity) return
+    const cleanEmail = notifyEmail.trim()
+    if (emailNotifyEnabled && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setEmailNotifyMessage('enter a valid email')
+      return
+    }
+
+    const deviceToken = getDeviceToken(username)
+    if (!deviceToken) {
+      setEmailNotifyMessage('this browser is missing its identity token')
+      return
+    }
+
+    setEmailNotifySaving(true)
+    setEmailNotifyMessage('')
+    try {
+      const { data, error } = await supabase.rpc('set_notification_settings', {
+        p_username: username,
+        p_device_token: deviceToken,
+        p_email: cleanEmail || null,
+        p_enabled: emailNotifyEnabled,
+      })
+      if (error || !data) {
+        setEmailNotifyMessage('could not save email notifications')
+        return
+      }
+      setEmailNotifyMessage('saved ✓')
+    } finally {
+      setEmailNotifySaving(false)
+    }
+  }
 
   async function savePin() {
     if (!/^\d{6}$/.test(pinInput)) {
@@ -302,9 +391,17 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   }
 
   function openDM(user: string) {
+    if (!user || user === username) return
     setOpenDMs(prev => prev.includes(user) ? prev : [...prev, user])
     setUnreadFrom(prev => prev.filter(u => u !== user))
     setShowUsers(false)
+    supabase
+      .from('dm_messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('to_username', username)
+      .eq('from_username', user)
+      .is('read_at', null)
+      .then(() => {})
     if(typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'dm_opened')
     }
@@ -459,7 +556,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
 
           {/* Center */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-            <MessageFeed entries={entries} currentUser={username} />
+            <MessageFeed entries={entries} currentUser={username} onDM={openDM} />
             <MessageInput onSend={handleSend} disabled={!connected} isMobile={isMobile} isEmbedded={isEmbedded} />
           </div>
 
@@ -782,6 +879,49 @@ export default function ChatWindow({ username }: ChatWindowProps) {
                         )}
                       </>
                     )}
+                  </div>
+
+                  <div style={{
+                    padding: '10px 11px',
+                    background: '#efefef',
+                    border: '1px solid #9a9a9a',
+                    marginBottom: 12,
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000080', marginBottom: 5 }}>
+                      OFFLINE DM EMAILS
+                    </div>
+                    <div style={{ fontSize: 10, lineHeight: 1.5, color: '#555', marginBottom: 8 }}>
+                      get one email when a private message is waiting and you're offline. notifications are batched so rapid messages don't spam you.
+                    </div>
+                    <input
+                      className="input-retro"
+                      style={{ width: '100%', marginBottom: 7, fontSize: 12 }}
+                      value={notifyEmail}
+                      onChange={e => { setNotifyEmail(e.target.value); setEmailNotifyMessage('') }}
+                      placeholder="you@example.com"
+                      type="email"
+                    />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 10, marginBottom: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={emailNotifyEnabled}
+                        onChange={e => { setEmailNotifyEnabled(e.target.checked); setEmailNotifyMessage('') }}
+                      />
+                      email me when an offline DM is waiting
+                    </label>
+                    {emailNotifyMessage && (
+                      <div style={{ fontSize: 10, marginBottom: 7, color: emailNotifyMessage.includes('✓') ? '#006600' : '#800000' }}>
+                        {emailNotifyMessage}
+                      </div>
+                    )}
+                    <button
+                      className="btn-retro"
+                      onClick={saveEmailNotifications}
+                      disabled={emailNotifySaving}
+                      style={{ width: '100%' }}
+                    >
+                      {emailNotifySaving ? 'saving...' : 'save email notifications'}
+                    </button>
                   </div>
 
                   <div style={{ display: 'flex', gap: 8 }}>
