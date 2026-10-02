@@ -105,12 +105,14 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile, is
   }
 
   const windowStyle: React.CSSProperties = isMobile ? {
-    // Mobile: bottom sheet — narrower, centered, slides up from bottom
+    // Compact bottom sheet. The chatroom can be embedded in a ~700px-wide Lab
+    // window on desktop, so cap the DM width instead of letting it span 92%.
     position: 'absolute',
     bottom: 0,
-    left: '4%',
-    right: '4%',
-    width: '92%',
+    left: '50%',
+    right: 'auto',
+    width: 'min(92%, 540px)',
+    transform: 'translateX(-50%)',
     height: '52%',
     zIndex: 200,
     display: 'flex',
