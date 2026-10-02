@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getDeviceToken, hasLocalPin, setLocalPinStatus, clearActiveIdentity } from '@/lib/identity'
+import { playChatSound, primeChatAudio } from '@/lib/sounds'
 import { getNextSystemMessage, nextSystemMessageDelay } from '@/lib/systemMessages'
 import { type Message, type SystemMessage, type Room } from '@/types'
 import RoomList from './RoomList'
@@ -53,6 +54,10 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [pinSaving, setPinSaving] = useState(false)
   const [editingPin, setEditingPin] = useState(false)
   const [showClaimNudge, setShowClaimNudge] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('chatroom_sound') !== 'off'
+  })
   useEffect(() => {
     const check = () => {
       // Check both window width and parent frame width for embedded context
@@ -63,6 +68,33 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  useEffect(() => {
+    // Browsers require a user gesture before Web Audio can play.
+    const unlock = () => {
+      primeChatAudio()
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
+  function toggleSound() {
+    const next = !soundEnabled
+    setSoundEnabled(next)
+    localStorage.setItem('chatroom_sound', next ? 'on' : 'off')
+    if (next) {
+      primeChatAudio()
+      playChatSound('message', true)
+    }
+  }
 
   useEffect(() => {
     // Check URL param — lab passes ?embedded=1 when loading in iframe
@@ -83,7 +115,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       const timer = setTimeout(() => setShowClaimNudge(false), 7000)
       return () => clearTimeout(timer)
     }
-  }, [username])
+  }, [username, soundEnabled])
 
   async function savePin() {
     if (!/^\d{6}$/.test(pinInput)) {
@@ -187,6 +219,9 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           const msg = payload.new as Message
           if (msg.deleted) return
           setEntries(prev => [...prev, msg])
+          if (msg.username !== username) {
+            playChatSound('message', soundEnabled)
+          }
         }
       )
       // Soft deletes — remove from view instantly
@@ -212,12 +247,14 @@ export default function ChatWindow({ username }: ChatWindowProps) {
         const joiner = (newPresences[0] as unknown as { username: string })?.username
         if (joiner && joiner !== username) {
           setEntries(prev => [...prev, makeSystemMsg(`${joiner} has entered the room.`)])
+          playChatSound('join', soundEnabled)
         }
       })
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         const leaver = (leftPresences[0] as unknown as { username: string })?.username
         if (leaver && leaver !== username) {
           setEntries(prev => [...prev, makeSystemMsg(`${leaver} has left.`)])
+          playChatSound('leave', soundEnabled)
         }
       })
       .subscribe(async (status) => {
@@ -287,6 +324,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
         { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `to_username=eq.${username}` },
         (payload) => {
           const msg = payload.new as { from_username: string }
+          playChatSound('dm', soundEnabled)
           if (!openDMs.includes(msg.from_username)) {
             setUnreadFrom(prev => prev.includes(msg.from_username) ? prev : [...prev, msg.from_username])
           }
@@ -294,7 +332,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [username, openDMs])
+  }, [username, openDMs, soundEnabled])
 
   // ── Send message ──────────────────────────────────────
   async function handleSend(content: string) {
@@ -308,6 +346,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       }
       throw error
     }
+    playChatSound('send', soundEnabled)
     if(typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'message_sent', { room_id: currentRoom })
     }
@@ -374,12 +413,31 @@ export default function ChatWindow({ username }: ChatWindowProps) {
               ● {onlineUsers.length} online — tap to DM
             </div>
           ) : <span />}
-          {/* Connection status — desktop only */}
-          {!isMobile && (
-            <span style={{ color: connected ? '#008000' : '#808080', marginLeft: 'auto' }}>
-              {connected ? '● connected' : '○ connecting...'}
-            </span>
-          )}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={toggleSound}
+              title={soundEnabled ? 'mute chat sounds' : 'turn chat sounds on'}
+              aria-label={soundEnabled ? 'mute chat sounds' : 'turn chat sounds on'}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                padding: '1px 3px',
+                fontFamily: 'Courier New',
+                fontSize: 11,
+                color: '#444',
+                cursor: 'pointer',
+              }}
+            >
+              {soundEnabled ? '🔊 sound' : '🔇 muted'}
+            </button>
+
+            {/* Connection status — desktop only */}
+            {!isMobile && (
+              <span style={{ color: connected ? '#008000' : '#808080' }}>
+                {connected ? '● connected' : '○ connecting...'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Three-panel layout */}
