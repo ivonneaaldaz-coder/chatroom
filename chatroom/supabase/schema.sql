@@ -31,7 +31,7 @@ create policy "Insert messages"
   with check (
     length(content) <= 500
     and length(username) <= 30
-    and room in ('lobby', 'artists', 'builders', 'marketers', 'travelers', 'random')
+    and room in ('lobby', 'artists', 'builders', 'marketers', 'travelers', 'random', 'feedback')
   );
 
 -- Nobody can update or hard-delete via API — soft delete only via service role
