@@ -51,6 +51,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   const [pinConfirm, setPinConfirm] = useState('')
   const [pinMessage, setPinMessage] = useState('')
   const [pinSaving, setPinSaving] = useState(false)
+  const [editingPin, setEditingPin] = useState(false)
   const [showClaimNudge, setShowClaimNudge] = useState(false)
   useEffect(() => {
     const check = () => {
@@ -119,7 +120,8 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       setHasPin(true)
       setPinInput('')
       setPinConfirm('')
-      setPinMessage('PIN saved ✓')
+      setPinMessage('')
+      setEditingPin(false)
     } catch {
       setPinMessage('could not save PIN — check your connection')
     } finally {
@@ -130,12 +132,14 @@ export default function ChatWindow({ username }: ChatWindowProps) {
   function chooseAnotherUsername() {
     clearActiveIdentity()
     setProfileOpen(false)
+    setEditingPin(false)
     router.push('/?switch=1')
   }
 
   function signOut() {
     clearActiveIdentity()
     setProfileOpen(false)
+    setEditingPin(false)
     router.push('/?signedout=1')
   }
 
@@ -571,7 +575,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       {/* Identity panel */}
       {profileOpen && (
         <div
-          onClick={() => setProfileOpen(false)}
+          onClick={() => { setProfileOpen(false); setEditingPin(false); setPinMessage(''); setPinInput(''); setPinConfirm('') }}
           style={{
             position: 'fixed',
             inset: 0,
@@ -592,7 +596,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
               <span>{claimedIdentity ? '🔑' : '👤'}</span>
               <span className="titlebar-title">identity — {username}</span>
               <button
-                onClick={() => setProfileOpen(false)}
+                onClick={() => { setProfileOpen(false); setEditingPin(false); setPinMessage(''); setPinInput(''); setPinConfirm('') }}
                 style={{
                   marginLeft: 'auto',
                   width: 18,
@@ -625,56 +629,96 @@ export default function ChatWindow({ username }: ChatWindowProps) {
                     border: '1px solid #9a9a9a',
                     marginBottom: 12,
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000080', marginBottom: 5 }}>
-                      {hasPin ? 'PIN SET ✓' : 'OPTIONAL: CREATE A PIN'}
-                    </div>
-                    <div style={{ fontSize: 10, lineHeight: 1.5, color: '#555', marginBottom: 8 }}>
-                      {hasPin
-                        ? 'use a 6-digit PIN to sign into this username on another browser or device. enter a new one below if you want to change it.'
-                        : 'want to use this username on another browser or device? create your own 6-digit PIN.'}
-                    </div>
+                    {hasPin && !editingPin ? (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000080', marginBottom: 5 }}>
+                          PIN SET ✓
+                        </div>
+                        <div style={{ fontSize: 10, lineHeight: 1.5, color: '#555', marginBottom: 8 }}>
+                          your 6-digit PIN is set for signing into this username on another browser or device.
+                        </div>
+                        <button
+                          className="btn-retro"
+                          onClick={() => {
+                            setEditingPin(true)
+                            setPinMessage('')
+                            setPinInput('')
+                            setPinConfirm('')
+                          }}
+                          style={{ width: '100%' }}
+                        >
+                          change PIN
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 'bold', color: '#000080', marginBottom: 5 }}>
+                          {hasPin ? 'CHANGE PIN' : 'OPTIONAL: CREATE A PIN'}
+                        </div>
+                        <div style={{ fontSize: 10, lineHeight: 1.5, color: '#555', marginBottom: 8 }}>
+                          {hasPin
+                            ? 'enter a new 6-digit PIN below.'
+                            : 'want to use this username on another browser or device? create your own 6-digit PIN.'}
+                        </div>
 
-                    <input
-                      className="input-retro"
-                      style={{ width: '100%', marginBottom: 6, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
-                      value={pinInput}
-                      onChange={e => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
-                      placeholder={hasPin ? 'new PIN' : '6-digit PIN'}
-                      maxLength={6}
-                      inputMode="numeric"
-                    />
-                    <input
-                      className="input-retro"
-                      style={{ width: '100%', marginBottom: 7, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
-                      value={pinConfirm}
-                      onChange={e => { setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
-                      onKeyDown={e => e.key === 'Enter' && savePin()}
-                      placeholder="confirm PIN"
-                      maxLength={6}
-                      inputMode="numeric"
-                    />
+                        <input
+                          className="input-retro"
+                          style={{ width: '100%', marginBottom: 6, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
+                          value={pinInput}
+                          onChange={e => { setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
+                          placeholder={hasPin ? 'new PIN' : '6-digit PIN'}
+                          maxLength={6}
+                          inputMode="numeric"
+                        />
+                        <input
+                          className="input-retro"
+                          style={{ width: '100%', marginBottom: 7, textAlign: 'center', letterSpacing: '.2em', fontSize: 16 }}
+                          value={pinConfirm}
+                          onChange={e => { setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinMessage('') }}
+                          onKeyDown={e => e.key === 'Enter' && savePin()}
+                          placeholder="confirm PIN"
+                          maxLength={6}
+                          inputMode="numeric"
+                        />
 
-                    {pinMessage && (
-                      <div style={{
-                        fontSize: 10,
-                        marginBottom: 7,
-                        color: pinMessage.includes('✓') ? '#006600' : '#800000',
-                      }}>
-                        {pinMessage}
-                      </div>
+                        {pinMessage && (
+                          <div style={{
+                            fontSize: 10,
+                            marginBottom: 7,
+                            color: '#800000',
+                          }}>
+                            {pinMessage}
+                          </div>
+                        )}
+
+                        <button
+                          className="btn-retro primary"
+                          onClick={savePin}
+                          disabled={pinInput.length !== 6 || pinConfirm.length !== 6 || pinSaving}
+                          style={{
+                            width: '100%',
+                            opacity: pinInput.length === 6 && pinConfirm.length === 6 && !pinSaving ? 1 : .55,
+                          }}
+                        >
+                          {pinSaving ? 'saving...' : hasPin ? 'save new PIN' : 'save PIN'}
+                        </button>
+
+                        {hasPin && (
+                          <button
+                            className="btn-retro"
+                            onClick={() => {
+                              setEditingPin(false)
+                              setPinInput('')
+                              setPinConfirm('')
+                              setPinMessage('')
+                            }}
+                            style={{ width: '100%', marginTop: 7 }}
+                          >
+                            cancel
+                          </button>
+                        )}
+                      </>
                     )}
-
-                    <button
-                      className="btn-retro primary"
-                      onClick={savePin}
-                      disabled={pinInput.length !== 6 || pinConfirm.length !== 6 || pinSaving}
-                      style={{
-                        width: '100%',
-                        opacity: pinInput.length === 6 && pinConfirm.length === 6 && !pinSaving ? 1 : .55,
-                      }}
-                    >
-                      {pinSaving ? 'saving...' : hasPin ? 'change PIN' : 'save PIN'}
-                    </button>
                   </div>
 
                   <div style={{ display: 'flex', gap: 8 }}>
