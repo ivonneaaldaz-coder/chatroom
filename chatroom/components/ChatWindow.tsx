@@ -520,6 +520,18 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       {/* New claim nudge — optional PIN comes later, not before chat */}
       {showClaimNudge && (
         <div
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            setShowClaimNudge(false)
+            setProfileOpen(true)
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setShowClaimNudge(false)
+              setProfileOpen(true)
+            }
+          }}
           style={{
             position: 'absolute',
             right: 10,
@@ -538,27 +550,21 @@ export default function ChatWindow({ username }: ChatWindowProps) {
             fontFamily: 'Courier New',
             fontSize: 11,
             lineHeight: 1.5,
+            cursor: 'pointer',
           }}
         >
           <strong>{username} claimed ✓</strong><br />
           this browser will remember you.
-          <button
-            onClick={() => { setShowClaimNudge(false); setProfileOpen(true) }}
+          <span
             style={{
               display: 'block',
               marginTop: 5,
-              padding: 0,
-              border: 'none',
-              background: 'transparent',
               color: '#000080',
               textDecoration: 'underline',
-              fontFamily: 'Courier New',
-              fontSize: 11,
-              cursor: 'pointer',
             }}
           >
-            add a PIN for other devices
-          </button>
+            set up a PIN for other devices →
+          </span>
         </div>
       )}
 
