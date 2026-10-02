@@ -24,9 +24,10 @@ function formatTime(iso: string): string {
 interface MessageFeedProps {
   entries: Entry[]
   currentUser: string
+  onDM: (username: string) => void
 }
 
-export default function MessageFeed({ entries, currentUser }: MessageFeedProps) {
+export default function MessageFeed({ entries, currentUser, onDM }: MessageFeedProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -90,13 +91,20 @@ export default function MessageFeed({ entries, currentUser }: MessageFeedProps) 
             }}>
               [{formatTime(entry.created_at)}]
             </span>
-            <span style={{
-              fontWeight: 'bold',
-              color: isMe ? '#000080' : usernameColor(entry.username),
-              fontFamily: 'Courier New',
-              fontSize: 13,
-              flexShrink: 0,
-            }}>
+            <span
+              onClick={() => !isMe && onDM(entry.username)}
+              title={isMe ? undefined : `send ${entry.username} a private message`}
+              style={{
+                fontWeight: 'bold',
+                color: isMe ? '#000080' : usernameColor(entry.username),
+                fontFamily: 'Courier New',
+                fontSize: 13,
+                flexShrink: 0,
+                cursor: isMe ? 'default' : 'pointer',
+                textDecoration: isMe ? 'none' : 'underline',
+                textUnderlineOffset: 2,
+              }}
+            >
               {entry.username}:
             </span>
             <span style={{
