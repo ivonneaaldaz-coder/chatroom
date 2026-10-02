@@ -1,4 +1,4 @@
-export type Room = 'lobby' | 'artists' | 'builders' | 'marketers' | 'travelers' | 'random'
+export type Room = 'lobby' | 'artists' | 'builders' | 'marketers' | 'travelers' | 'random' | 'feedback'
 
 export interface Message {
   id: string
@@ -28,4 +28,5 @@ export const ROOMS: { id: Room; label: string; live: boolean }[] = [
   { id: 'marketers', label: '# marketers', live: true },
   { id: 'travelers', label: '# travelers', live: true },
   { id: 'random',    label: '# random',    live: true },
+  { id: 'feedback',  label: '# feedback',  live: true },
 ]
