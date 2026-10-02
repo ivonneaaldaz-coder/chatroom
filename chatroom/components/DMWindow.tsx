@@ -96,6 +96,15 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile, is
         .from('dm_messages')
         .insert({ from_username: currentUser, to_username: recipient, content: trimmed })
       if (err) throw err
+
+      // Fire-and-forget: server checks whether the recipient is actually offline,
+      // opted into email, and hasn't already been notified recently.
+      fetch('/api/dm-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: currentUser, to: recipient }),
+      }).catch(() => {})
+
       setInput('')
     } catch {
       setError('failed to send')
