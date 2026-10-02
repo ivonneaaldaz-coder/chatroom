@@ -395,13 +395,14 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     setOpenDMs(prev => prev.includes(user) ? prev : [...prev, user])
     setUnreadFrom(prev => prev.filter(u => u !== user))
     setShowUsers(false)
-    supabase
-      .from('dm_messages')
-      .update({ read_at: new Date().toISOString() })
-      .eq('to_username', username)
-      .eq('from_username', user)
-      .is('read_at', null)
-      .then(() => {})
+    const deviceToken = getDeviceToken(username)
+    if (deviceToken) {
+      supabase.rpc('mark_dm_read', {
+        p_username: username,
+        p_from_username: user,
+        p_device_token: deviceToken,
+      }).then(() => {})
+    }
     if(typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'dm_opened')
     }
