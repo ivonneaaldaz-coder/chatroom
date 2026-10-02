@@ -975,6 +975,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           onClose={() => closeDM(dmUser)}
           isMobile={isMobile}
           isEmbedded={isEmbedded}
+          soundEnabled={soundEnabled}
         />
       ))}
     </div>

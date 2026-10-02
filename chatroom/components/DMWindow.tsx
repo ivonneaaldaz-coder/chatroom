@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { validateMessage } from '@/lib/moderation'
+import { playChatSound } from '@/lib/sounds'
 import EmojiPicker from './EmojiPicker'
 
 interface DMMessage {
@@ -19,6 +20,7 @@ interface DMWindowProps {
   onClose: () => void
   isMobile: boolean
   isEmbedded: boolean
+  soundEnabled: boolean
 }
 
 function conversationId(a: string, b: string) {
@@ -30,7 +32,7 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function DMWindow({ currentUser, recipient, onClose, isMobile, isEmbedded }: DMWindowProps) {
+export default function DMWindow({ currentUser, recipient, onClose, isMobile, isEmbedded, soundEnabled }: DMWindowProps) {
   const [messages, setMessages] = useState<DMMessage[]>([])
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
@@ -105,6 +107,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile, is
         body: JSON.stringify({ from: currentUser, to: recipient }),
       }).catch(() => {})
 
+      playChatSound('send', soundEnabled)
       setInput('')
     } catch {
       setError('failed to send')
