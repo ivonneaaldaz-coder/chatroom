@@ -21,6 +21,16 @@ function makeSystemMsg(content: string): SystemMessage {
   return { id: `sys-${Date.now()}-${systemMsgCounter++}`, content, type: 'system' }
 }
 
+const ROOM_WELCOME: Record<Room, string> = {
+  lobby: 'welcome. no algorithm is watching you here.',
+  artists: "welcome. share what you're making.",
+  builders: 'welcome. build in public.',
+  marketers: 'welcome. talk brand, growth, culture.',
+  travelers: 'welcome. swap places, stories, tips.',
+  random: 'welcome. anything goes.',
+  feedback: 'welcome. ideas, bugs, requests.',
+}
+
 interface ChatWindowProps {
   username: string
 }
@@ -289,8 +299,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
 
     const msgs = (data ?? []) as Message[]
     setEntries([
-      makeSystemMsg('welcome to the room.'),
-      makeSystemMsg('no algorithm is watching you here.'),
+      makeSystemMsg(ROOM_WELCOME[room]),
       ...msgs,
     ])
   }, [])

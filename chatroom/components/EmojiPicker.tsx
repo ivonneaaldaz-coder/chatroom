@@ -42,21 +42,24 @@ export default function EmojiPicker({ onSelect, isMobile, isEmbedded }: EmojiPic
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
-  const panelStyle: React.CSSProperties = isMobile ? {
+  const panelStyle: React.CSSProperties = (isMobile && !isEmbedded) ? {
     position: 'fixed',
     bottom: 60,
-    left: 0,
-    right: 0,
+    left: '50%',
+    width: 'min(92vw, 360px)',
+    transform: 'translateX(-50%)',
     zIndex: 300,
     background: '#f0f0f0',
     borderTop: '2px solid #ffffff',
-    borderBottom: '1px solid #808080',
+    borderLeft: '2px solid #ffffff',
+    borderRight: '2px solid #404040',
+    borderBottom: '2px solid #404040',
     boxShadow: '0 -4px 12px rgba(0,0,0,0.2)',
   } : {
     position: 'absolute',
     bottom: '100%',
     left: 0,
-    width: Math.min(260, window.innerWidth * 0.27),
+    width: Math.min(360, window.innerWidth * 0.72),
     zIndex: 300,
     background: '#f0f0f0',
     borderTop: '2px solid #ffffff',
@@ -140,10 +143,10 @@ export default function EmojiPicker({ onSelect, isMobile, isEmbedded }: EmojiPic
           {/* Emoji grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(8, 1fr)',
+            gridTemplateColumns: 'repeat(6, 1fr)',
             gap: 2,
             padding: 8,
-            maxHeight: isMobile ? 160 : 180,
+            maxHeight: 180,
             overflowY: 'auto',
           }}>
             {EMOJI_CATEGORIES[activeCategory].emojis.map((emoji, i) => (
