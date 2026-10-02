@@ -58,6 +58,11 @@ export default function ChatWindow({ username }: ChatWindowProps) {
     if (typeof window === 'undefined') return true
     return localStorage.getItem('chatroom_sound') !== 'off'
   })
+  const soundEnabledRef = useRef(soundEnabled)
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled
+  }, [soundEnabled])
   useEffect(() => {
     const check = () => {
       // Check both window width and parent frame width for embedded context
@@ -115,7 +120,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       const timer = setTimeout(() => setShowClaimNudge(false), 7000)
       return () => clearTimeout(timer)
     }
-  }, [username, soundEnabled])
+  }, [username])
 
   async function savePin() {
     if (!/^\d{6}$/.test(pinInput)) {
@@ -220,7 +225,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
           if (msg.deleted) return
           setEntries(prev => [...prev, msg])
           if (msg.username !== username) {
-            playChatSound('message', soundEnabled)
+            playChatSound('message', soundEnabledRef.current)
           }
         }
       )
@@ -247,14 +252,14 @@ export default function ChatWindow({ username }: ChatWindowProps) {
         const joiner = (newPresences[0] as unknown as { username: string })?.username
         if (joiner && joiner !== username) {
           setEntries(prev => [...prev, makeSystemMsg(`${joiner} has entered the room.`)])
-          playChatSound('join', soundEnabled)
+          playChatSound('join', soundEnabledRef.current)
         }
       })
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
         const leaver = (leftPresences[0] as unknown as { username: string })?.username
         if (leaver && leaver !== username) {
           setEntries(prev => [...prev, makeSystemMsg(`${leaver} has left.`)])
-          playChatSound('leave', soundEnabled)
+          playChatSound('leave', soundEnabledRef.current)
         }
       })
       .subscribe(async (status) => {
@@ -324,7 +329,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
         { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `to_username=eq.${username}` },
         (payload) => {
           const msg = payload.new as { from_username: string }
-          playChatSound('dm', soundEnabled)
+          playChatSound('dm', soundEnabledRef.current)
           if (!openDMs.includes(msg.from_username)) {
             setUnreadFrom(prev => prev.includes(msg.from_username) ? prev : [...prev, msg.from_username])
           }
@@ -332,7 +337,7 @@ export default function ChatWindow({ username }: ChatWindowProps) {
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [username, openDMs, soundEnabled])
+  }, [username, openDMs])
 
   // ── Send message ──────────────────────────────────────
   async function handleSend(content: string) {
