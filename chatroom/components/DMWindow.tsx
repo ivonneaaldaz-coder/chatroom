@@ -235,7 +235,7 @@ export default function DMWindow({ currentUser, recipient, onClose, isMobile, is
           <EmojiPicker onSelect={handleEmojiSelect} isMobile={isMobile} />
           <input
             className="input-retro"
-            style={{ flex: 1, fontSize: isMobile ? 16 : 13 }}
+            style={{ flex: 1, minWidth: 0, fontSize: isMobile ? 16 : 13 }}
             value={input}
             onChange={e => { setInput(e.target.value); setError('') }}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
